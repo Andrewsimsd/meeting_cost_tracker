@@ -3,7 +3,7 @@ mod tests {
     use std::path::PathBuf;
     use std::time::Duration;
 
-    use meeting_cost_tracker::{EmployeeCategory, Meeting, load_categories, save_categories};
+    use meeting_cost_tracker::{load_categories, save_categories, EmployeeCategory, Meeting};
 
     #[test]
     fn test_employee_category_creation() {
@@ -41,6 +41,18 @@ mod tests {
         meeting.reset();
 
         assert_eq!(meeting.total_cost(), 0.0);
+    }
+
+    #[test]
+    fn test_add_and_remove_attendees() {
+        let cat = EmployeeCategory::new("QA", 80_000.0).unwrap();
+        let mut meeting = Meeting::new();
+        meeting.add_attendee(cat.clone(), 3);
+        assert_eq!(meeting.attendees().next().unwrap().1 .1, 3);
+        meeting.remove_attendee(cat.title(), 2);
+        assert_eq!(meeting.attendees().next().unwrap().1 .1, 1);
+        meeting.remove_attendee(cat.title(), 1);
+        assert!(meeting.attendees().next().is_none());
     }
 
     #[test]

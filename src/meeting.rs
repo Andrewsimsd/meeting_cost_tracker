@@ -26,8 +26,29 @@ impl Meeting {
 
     /// Adds `count` attendees of a given [`EmployeeCategory`] to the meeting.
     pub fn add_attendee(&mut self, category: EmployeeCategory, count: u32) {
-    let entry = self.attendees.entry(category.title().to_string()).or_insert((category.salary(), 0));
-    entry.1 += count;
+        let entry = self
+            .attendees
+            .entry(category.title().to_string())
+            .or_insert((category.salary(), 0));
+        entry.1 += count;
+    }
+
+    /// Removes up to `count` attendees of the given title from the meeting.
+    /// If the resulting count is zero, the attendee entry is removed entirely.
+    pub fn remove_attendee(&mut self, title: &str, count: u32) {
+        if let Some(entry) = self.attendees.get_mut(title) {
+            if entry.1 <= count {
+                self.attendees.remove(title);
+            } else {
+                entry.1 -= count;
+            }
+        }
+    }
+
+    /// Returns an iterator over the attendee list.
+    #[must_use]
+    pub fn attendees(&self) -> impl Iterator<Item = (&String, &(f64, u32))> {
+        self.attendees.iter()
     }
 
     /// Starts the meeting. Does nothing if already running.
