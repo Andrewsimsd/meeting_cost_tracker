@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: cargo test --verbose
+      - name: Doc tests
+        run: cargo test --doc
+
+  release:
+    name: Build & Release Cross-Platform
+    needs: test
+    if: startswith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: ''
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            ext: ''
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: '.exe'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename and zip binary
+        shell: bash
+        run: |
+          mkdir dist
+          cp target/${{ matrix.target }}/release/duplicate_file_finder${{ matrix.ext }} dist/duplicate_file_finder-${{ matrix.target }}${{ matrix.ext }}
+        # Only run zip if not Windows
+      - name: Zip binary (non-Windows)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          cd dist
+          zip duplicate_file_finder-${{ matrix.target }}.zip duplicate_file_finder-${{ matrix.target }}${{ matrix.ext }}
+
+      - name: Zip binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/duplicate_file_finder-${{ matrix.target }}.exe -DestinationPath dist/duplicate_file_finder-${{ matrix.target }}.zip
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          name: ${{ github.ref_name }}
+          files: dist/*.zip
+
+  publish:
+    name: Publish to crates.io
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
