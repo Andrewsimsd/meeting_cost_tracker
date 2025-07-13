@@ -16,6 +16,35 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Terminal;
 
+/// Formats a list of strings into columnar [`Line`] values based on the given
+/// width. The lines attempt to pack as many columns as will fit without
+/// exceeding the available area.
+fn column_lines(items: &[String], width: u16, style: Style) -> Vec<Line> {
+    if items.is_empty() {
+        return Vec::new();
+    }
+
+    let max_len = items.iter().map(|s| s.len()).max().unwrap_or(0) as u16 + 2;
+    let cols = std::cmp::max(1, width / max_len);
+    let rows = (items.len() as u16 + cols - 1) / cols;
+
+    let mut lines = Vec::new();
+    for row in 0..rows {
+        let mut spans = Vec::new();
+        for col in 0..cols {
+            let idx = row as usize + col as usize * rows as usize;
+            if let Some(item) = items.get(idx) {
+                spans.push(Span::styled(
+                    format!("{item:<width$}", width = max_len as usize),
+                    style,
+                ));
+            }
+        }
+        lines.push(Line::from(spans));
+    }
+    lines
+}
+
 /// UI modes controlling user interaction.
 enum Mode {
     /// Normal viewing mode where meeting stats are displayed.
@@ -148,30 +177,34 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
                 .split(chunks[3]);
 
-            let category_list: Vec<Line> = categories
+            let category_strings: Vec<String> = categories
                 .iter()
                 .map(|c| {
-                    let text = if show_salaries {
+                    if show_salaries {
                         format!("{}: ${}", c.title(), c.salary())
                     } else {
                         c.title().to_string()
-                    };
-                    Line::from(Span::styled(text, Style::default().fg(Color::Cyan)))
+                    }
                 })
                 .collect();
+            let category_list = column_lines(
+                &category_strings,
+                lists[1].width.saturating_sub(2),
+                Style::default().fg(Color::Cyan),
+            );
             let list_widget = Paragraph::new(category_list)
                 .block(Block::default().borders(Borders::ALL).title("Employee Categories"));
             f.render_widget(list_widget, lists[1]);
 
-            let meeting_list: Vec<Line> = meeting
+            let meeting_strings: Vec<String> = meeting
                 .attendees()
-                .map(|(cat, count)| {
-                    Line::from(Span::styled(
-                        format!("{} x {}", cat.title(), count),
-                        Style::default().fg(Color::Magenta),
-                    ))
-                })
+                .map(|(cat, count)| format!("{} x {}", cat.title(), count))
                 .collect();
+            let meeting_list = column_lines(
+                &meeting_strings,
+                lists[0].width.saturating_sub(2),
+                Style::default().fg(Color::Magenta),
+            );
             let meeting_widget = Paragraph::new(meeting_list)
                 .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
             f.render_widget(meeting_widget, lists[0]);
