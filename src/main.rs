@@ -119,7 +119,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Mode::View => {
                     let help = Paragraph::new(Line::from(vec![
                         Span::styled(
-                            "[s] Start  [t] Stop  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [q] Quit",
+                            "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [q] Quit",
                             Style::default().fg(Color::Yellow),
                         ),
                     ]))
@@ -185,6 +185,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         KeyCode::Char('q') => break,
                         KeyCode::Char('s') => meeting.start(),
                         KeyCode::Char('t') => meeting.stop(),
+                        KeyCode::Char('c') => meeting.reset(),
                         KeyCode::Char('a') => {
                             input_text.clear();
                             mode = Mode::AddCategory;
