@@ -17,6 +17,8 @@
 //! println!("Cost: ${:.2}", meeting.total_cost());
 //! ```
 
+#![warn(clippy::pedantic)]
+
 mod meeting;
 mod model;
 mod storage;

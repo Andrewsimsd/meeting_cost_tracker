@@ -1,5 +1,6 @@
 //! Interactive terminal application for tracking meeting costs.
 // main.rs
+#![warn(clippy::pedantic)]
 
 use std::{error::Error, path::PathBuf, time::Duration};
 
