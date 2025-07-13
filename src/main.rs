@@ -1,3 +1,4 @@
+//! Interactive terminal application for tracking meeting costs.
 // main.rs
 
 use std::{error::Error, path::PathBuf, time::Duration};
@@ -14,14 +15,30 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Terminal;
 
+/// UI modes controlling user interaction.
 enum Mode {
+    /// Normal viewing mode where meeting stats are displayed.
     View,
+    /// Mode for creating a new [`EmployeeCategory`].
     AddCategory,
+    /// Mode for deleting an existing [`EmployeeCategory`].
     DeleteCategory,
+    /// Mode for adding attendees to the [`Meeting`].
     AddAttendee,
+    /// Mode for removing attendees from the [`Meeting`].
     RemoveAttendee,
 }
 
+/// Entry point for the interactive TUI application.
+///
+/// This function initializes the terminal, loads persisted employee
+/// categories, and enters the main event loop. On exit, updated categories
+/// are saved back to disk.
+///
+/// # Errors
+///
+/// Returns an error if terminal initialization fails or if the category
+/// database cannot be loaded or saved.
 fn main() -> Result<(), Box<dyn Error>> {
     let db_path = PathBuf::from("categories.toml");
     let mut categories = load_categories(&db_path)?;

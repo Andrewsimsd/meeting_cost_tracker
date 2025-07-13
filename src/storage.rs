@@ -18,6 +18,11 @@ pub enum StorageError {
     TomlWrite(#[from] toml::ser::Error),
 }
 
+/// Internal helper struct used for serializing and deserializing the collection
+/// of [`EmployeeCategory`] values.
+///
+/// The wrapper is not exposed publicly but simplifies the structure of the TOML
+/// file on disk.
 #[derive(serde::Serialize, serde::Deserialize)]
 struct CategoryWrapper {
     categories: Vec<EmployeeCategory>,
@@ -49,6 +54,10 @@ struct CategoryWrapper {
 ///
 /// # See Also
 /// * [`save_categories`]
+///
+/// # Panics
+///
+/// This function does not panic.
 pub fn load_categories(path: &Path) -> Result<Vec<EmployeeCategory>, StorageError> {
     if !path.exists() {
         return Ok(vec![]);
@@ -84,6 +93,10 @@ pub fn load_categories(path: &Path) -> Result<Vec<EmployeeCategory>, StorageErro
 ///
 /// # See Also
 /// * [`load_categories`]
+///
+/// # Panics
+///
+/// This function does not panic.
 pub fn save_categories<P: AsRef<Path>>(
     path: P,
     categories: &[EmployeeCategory],
