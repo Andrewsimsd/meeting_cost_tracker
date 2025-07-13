@@ -73,7 +73,7 @@ pub fn load_categories(path: &Path) -> Result<Vec<EmployeeCategory>, StorageErro
 /// ```
 /// use std::path::Path;
 /// use meeting_cost_tracker::{save_categories, EmployeeCategory};
-/// let categories = vec![EmployeeCategory::new("Engineer", 100_000.0).unwrap()];
+/// let categories = vec![EmployeeCategory::new("Engineer", 100_000).unwrap()];
 /// save_categories(Path::new("categories.toml"), &categories).unwrap();
 /// ```
 ///

@@ -157,9 +157,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let meeting_list: Vec<Line> = meeting
                 .attendees()
-                .map(|(title, (_, count))| {
+                .map(|(cat, count)| {
                     Line::from(Span::styled(
-                        format!("{title} x {count}"),
+                        format!("{cat.title()} x {count}"),
                         Style::default().fg(Color::Magenta),
                     ))
                 })
@@ -206,7 +206,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             match mode {
                                 Mode::AddCategory => {
                                     if let Some((title, salary_str)) = input_text.split_once(':') {
-                                        if let Ok(salary) = salary_str.trim().parse::<f64>() {
+                                        if let Ok(salary) = salary_str.trim().parse::<u64>() {
                                             if let Ok(cat) =
                                                 EmployeeCategory::new(title.trim(), salary)
                                             {
