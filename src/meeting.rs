@@ -25,7 +25,7 @@ impl Meeting {
     }
 
     /// Adds `count` attendees of a given [`EmployeeCategory`] to the meeting.
-    pub fn add_attendee(&mut self, category: EmployeeCategory, count: u32) {
+    pub fn add_attendee(&mut self, category: &EmployeeCategory, count: u32) {
         let entry = self
             .attendees
             .entry(category.title().to_string())
@@ -84,6 +84,7 @@ impl Meeting {
 
     /// Returns the cost in dollars based on elapsed time and attendee salaries.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn total_cost(&self) -> f64 {
         let millis = self.duration().as_millis() as f64;
         self.attendees

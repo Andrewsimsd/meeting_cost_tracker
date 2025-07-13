@@ -180,7 +180,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                                 .iter()
                                                 .find(|c| c.title() == title.trim())
                                             {
-                                                meeting.add_attendee(cat.clone(), count);
+                                                meeting.add_attendee(&cat.clone(), count);
                                             }
                                         }
                                     }
