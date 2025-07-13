@@ -50,20 +50,20 @@ jobs:
         shell: bash
         run: |
           mkdir dist
-          cp target/${{ matrix.target }}/release/duplicate_file_finder${{ matrix.ext }} dist/duplicate_file_finder-${{ matrix.target }}${{ matrix.ext }}
+          cp target/${{ matrix.target }}/release/meeting_cost_tracker${{ matrix.ext }} dist/meeting_cost_tracker-${{ matrix.target }}${{ matrix.ext }}
         # Only run zip if not Windows
       - name: Zip binary (non-Windows)
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
           cd dist
-          zip duplicate_file_finder-${{ matrix.target }}.zip duplicate_file_finder-${{ matrix.target }}${{ matrix.ext }}
+          zip duplicate_file_finder-${{ matrix.target }}.zip meeting_cost_tracker-${{ matrix.target }}${{ matrix.ext }}
 
       - name: Zip binary (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/duplicate_file_finder-${{ matrix.target }}.exe -DestinationPath dist/duplicate_file_finder-${{ matrix.target }}.zip
+          Compress-Archive -Path dist/meeting_cost_tracker-${{ matrix.target }}.exe -DestinationPath dist/meeting_cost_tracker-${{ matrix.target }}.zip
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
