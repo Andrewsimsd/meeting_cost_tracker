@@ -1,6 +1,6 @@
 use std::fs;
-use std::path::Path;
 use std::io::{self, Write};
+use std::path::Path;
 
 use crate::model::EmployeeCategory;
 use thiserror::Error;
@@ -23,7 +23,27 @@ struct CategoryWrapper {
     categories: Vec<EmployeeCategory>,
 }
 
-/// Loads categories from a TOML file. Returns an empty Vec if the file doesn't exist.
+/// Loads employee categories from a TOML file.
+///
+/// If the file does not exist an empty collection is returned.
+///
+/// ## Example
+/// ```
+/// use std::path::Path;
+/// use meeting_cost_tracker::load_categories;
+/// let categories = load_categories(Path::new("categories.toml")).unwrap();
+/// ```
+///
+/// # Arguments
+///
+/// * `path` - Path to the TOML file.
+///
+/// # Returns
+///
+/// A collection of [`EmployeeCategory`] values.
+///
+/// # See Also
+/// * [`save_categories`]
 pub fn load_categories(path: &Path) -> Result<Vec<EmployeeCategory>, StorageError> {
     if !path.exists() {
         return Ok(vec![]);
@@ -33,7 +53,27 @@ pub fn load_categories(path: &Path) -> Result<Vec<EmployeeCategory>, StorageErro
     Ok(wrapper.categories)
 }
 
-/// Saves categories to a TOML file, overwriting any existing content.
+/// Persists employee categories to a TOML file, overwriting any existing content.
+///
+/// ## Example
+/// ```
+/// use std::path::Path;
+/// use meeting_cost_tracker::{save_categories, EmployeeCategory};
+/// let categories = vec![EmployeeCategory::new("Engineer", 100_000.0).unwrap()];
+/// save_categories(Path::new("categories.toml"), &categories).unwrap();
+/// ```
+///
+/// # Arguments
+///
+/// * `path` - Destination TOML file.
+/// * `categories` - Employee categories to store.
+///
+/// # Returns
+///
+/// Result indicating success or failure.
+///
+/// # See Also
+/// * [`load_categories`]
 pub fn save_categories<P: AsRef<Path>>(
     path: P,
     categories: &[EmployeeCategory],

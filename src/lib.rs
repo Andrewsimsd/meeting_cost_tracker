@@ -1,4 +1,3 @@
-
 //! # Meeting Cost Tracker
 //!
 //! A library for tracking the cost of meetings in real-time, based on attendee salaries.
@@ -11,17 +10,17 @@
 //!
 //! let category = EmployeeCategory::new("Engineer", 120_000.0).unwrap();
 //! let mut meeting = Meeting::new();
-//! meeting.add_attendee(category.clone(), 3);
+//! meeting.add_attendee(&category, 3);
 //! meeting.start();
 //! std::thread::sleep(std::time::Duration::from_millis(500));
 //! meeting.stop();
 //! println!("Cost: ${:.2}", meeting.total_cost());
 //! ```
 
-mod model;
 mod meeting;
+mod model;
 mod storage;
 
-pub use model::EmployeeCategory;
 pub use meeting::Meeting;
+pub use model::EmployeeCategory;
 pub use storage::{load_categories, save_categories};

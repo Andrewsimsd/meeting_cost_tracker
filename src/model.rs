@@ -21,11 +21,33 @@ pub struct EmployeeCategory {
 }
 
 impl EmployeeCategory {
-    /// Creates a new [`EmployeeCategory`] with validation.
+    /// Creates a new [`EmployeeCategory`] after validating its fields.
     ///
     /// # Errors
     ///
-    /// Returns [`EmployeeCategoryError`] if title is empty or salary is non-positive.
+    /// Returns an [`EmployeeCategoryError`] if `title` is empty or `salary` is not
+    /// greater than zero.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use meeting_cost_tracker::EmployeeCategory;
+    /// let category = EmployeeCategory::new("Engineer", 120_000.0).unwrap();
+    /// assert_eq!(category.title(), "Engineer");
+    /// ```
+    ///
+    /// # See Also
+    /// * [`EmployeeCategory::title`]
+    /// * [`EmployeeCategory::salary`]
+    ///
+    /// # Arguments
+    ///
+    /// * `title` - Category title.
+    /// * `salary` - Annual salary in dollars.
+    ///
+    /// # Returns
+    ///
+    /// A new [`EmployeeCategory`] on success.
     pub fn new<T: Into<String>>(title: T, salary: f64) -> Result<Self, EmployeeCategoryError> {
         let title = title.into();
         if title.trim().is_empty() {
@@ -38,18 +60,74 @@ impl EmployeeCategory {
     }
 
     /// Returns the title of the employee category.
+    ///
+    /// ## Example
+    /// ```
+    /// use meeting_cost_tracker::EmployeeCategory;
+    /// let cat = EmployeeCategory::new("Designer", 80_000.0).unwrap();
+    /// assert_eq!(cat.title(), "Designer");
+    /// ```
+    ///
+    /// # Arguments
+    ///
+    /// * None
+    ///
+    /// # Returns
+    ///
+    /// The title string.
+    ///
+    /// # See Also
+    /// * [`EmployeeCategory::salary`]
     #[must_use]
     pub fn title(&self) -> &str {
         &self.title
     }
 
-    /// Returns the annual salary.
+    /// Returns the annual salary for the category.
+    ///
+    /// ## Example
+    /// ```
+    /// use meeting_cost_tracker::EmployeeCategory;
+    /// let cat = EmployeeCategory::new("Engineer", 100_000.0).unwrap();
+    /// assert_eq!(cat.salary(), 100_000.0);
+    /// ```
+    ///
+    /// # Arguments
+    ///
+    /// * None
+    ///
+    /// # Returns
+    ///
+    /// Annual salary in dollars.
+    ///
+    /// # See Also
+    /// * [`EmployeeCategory::title`]
+    /// * [`EmployeeCategory::cost_per_millisecond`]
     #[must_use]
     pub fn salary(&self) -> f64 {
         self.salary
     }
 
-    /// Computes the cost per millisecond.
+    /// Computes the cost in dollars for each millisecond of time.
+    ///
+    /// ## Example
+    /// ```
+    /// use meeting_cost_tracker::EmployeeCategory;
+    /// let cat = EmployeeCategory::new("Analyst", 90_000.0).unwrap();
+    /// let ms = cat.cost_per_millisecond();
+    /// assert!(ms > 0.0);
+    /// ```
+    ///
+    /// # Arguments
+    ///
+    /// * None
+    ///
+    /// # Returns
+    ///
+    /// The cost per millisecond in dollars.
+    ///
+    /// # See Also
+    /// * [`EmployeeCategory::salary`]
     #[must_use]
     pub fn cost_per_millisecond(&self) -> f64 {
         self.salary / (365.25 * 24.0 * 60.0 * 60.0 * 1000.0)
