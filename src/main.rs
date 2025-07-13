@@ -112,7 +112,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .collect();
             let list_widget = Paragraph::new(category_list)
                 .block(Block::default().borders(Borders::ALL).title("Employee Categories"));
-            f.render_widget(list_widget, lists[0]);
+            f.render_widget(list_widget, lists[1]);
 
             let meeting_list: Vec<Line> = meeting
                 .attendees()
@@ -120,7 +120,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .collect();
             let meeting_widget = Paragraph::new(meeting_list)
                 .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
-            f.render_widget(meeting_widget, lists[1]);
+            f.render_widget(meeting_widget, lists[0]);
         })?;
 
         let timeout = tick_rate
