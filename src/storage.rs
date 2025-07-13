@@ -41,6 +41,11 @@ struct CategoryWrapper {
 /// # Returns
 ///
 /// A collection of [`EmployeeCategory`] values.
+
+/// # Errors
+///
+/// Returns a [`StorageError`] if the file cannot be read or if the contents
+/// fail to parse as TOML.
 ///
 /// # See Also
 /// * [`save_categories`]
@@ -71,6 +76,11 @@ pub fn load_categories(path: &Path) -> Result<Vec<EmployeeCategory>, StorageErro
 /// # Returns
 ///
 /// Result indicating success or failure.
+
+/// # Errors
+///
+/// Returns a [`StorageError`] if the file cannot be created or written, or if
+/// serialization of the categories fails.
 ///
 /// # See Also
 /// * [`load_categories`]
