@@ -33,8 +33,8 @@ directly using the `mct` command.
 
 The interface responds to several keyboard shortcuts:
 `s` to start, `t` to stop, `c` to reset the meeting, `a` to add a category,
-`d` to delete a category, `e` to add attendees, `r` to remove attendees, and
-`q` to quit.
+`d` to delete a category, `e` to add attendees, `r` to remove attendees,
+`p` to toggle salary visibility, and `q` to quit.
 
 ## See Also
 

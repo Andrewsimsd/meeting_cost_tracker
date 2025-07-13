@@ -48,6 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut mode = Mode::View;
     let mut input_text = String::new();
+    let mut show_salaries = false;
 
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
@@ -119,7 +120,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Mode::View => {
                     let help = Paragraph::new(Line::from(vec![
                         Span::styled(
-                            "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [q] Quit",
+                            "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [p] Toggle Salaries  [q] Quit",
                             Style::default().fg(Color::Yellow),
                         ),
                     ]))
@@ -150,10 +151,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             let category_list: Vec<Line> = categories
                 .iter()
                 .map(|c| {
-                    Line::from(Span::styled(
-                        format!("{}: ${}", c.title(), c.salary()),
-                        Style::default().fg(Color::Cyan),
-                    ))
+                    let text = if show_salaries {
+                        format!("{}: ${}", c.title(), c.salary())
+                    } else {
+                        c.title().to_string()
+                    };
+                    Line::from(Span::styled(text, Style::default().fg(Color::Cyan)))
                 })
                 .collect();
             let list_widget = Paragraph::new(category_list)
@@ -202,6 +205,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             input_text.clear();
                             mode = Mode::RemoveAttendee;
                         }
+                        KeyCode::Char('p') => show_salaries = !show_salaries,
                         _ => {}
                     },
                     Mode::AddCategory
