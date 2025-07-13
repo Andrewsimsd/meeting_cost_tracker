@@ -344,3 +344,92 @@ impl Default for Meeting {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::EmployeeCategory;
+    use std::thread::sleep;
+
+    fn sample_category() -> EmployeeCategory {
+        EmployeeCategory::new("dev", 120_000).unwrap()
+    }
+
+    #[test]
+    fn new_starts_empty() {
+        let meeting = Meeting::new();
+        assert!(!meeting.is_running());
+        assert_eq!(meeting.attendees().count(), 0);
+        assert_eq!(meeting.duration(), Duration::ZERO);
+    }
+
+    #[test]
+    fn default_equivalent_to_new() {
+        let a = Meeting::new();
+        let b = Meeting::default();
+        assert_eq!(a.is_running(), b.is_running());
+        assert_eq!(a.attendees().count(), b.attendees().count());
+    }
+
+    #[test]
+    fn add_and_remove_attendees_respects_counts() {
+        let cat = sample_category();
+        let mut meeting = Meeting::new();
+        meeting.add_attendee(&cat, 2);
+        meeting.add_attendee(&cat, 1);
+        assert_eq!(*meeting.attendees().next().unwrap().1, 3);
+        meeting.remove_attendee(cat.title(), 1);
+        assert_eq!(*meeting.attendees().next().unwrap().1, 2);
+        meeting.remove_attendee(cat.title(), 5);
+        assert!(meeting.attendees().next().is_none());
+    }
+
+    #[test]
+    fn start_stop_and_duration() {
+        let mut meeting = Meeting::new();
+        meeting.start();
+        sleep(Duration::from_millis(10));
+        meeting.start(); // should have no effect
+        sleep(Duration::from_millis(10));
+        meeting.stop();
+        let first = meeting.duration();
+        sleep(Duration::from_millis(10));
+        meeting.stop();
+        assert_eq!(meeting.duration(), first);
+        assert!(first >= Duration::from_millis(20));
+    }
+
+    #[test]
+    fn total_cost_accumulates() {
+        let cat = sample_category();
+        let mut meeting = Meeting::new();
+        meeting.add_attendee(&cat, 1);
+        meeting.start();
+        sleep(Duration::from_millis(10));
+        meeting.stop();
+        assert!(meeting.total_cost() > 0.0);
+    }
+
+    #[test]
+    fn reset_clears_state() {
+        let cat = sample_category();
+        let mut meeting = Meeting::new();
+        meeting.add_attendee(&cat, 1);
+        meeting.start();
+        sleep(Duration::from_millis(5));
+        meeting.stop();
+        meeting.reset();
+        assert_eq!(meeting.attendees().count(), 0);
+        assert!(!meeting.is_running());
+        assert_eq!(meeting.total_cost(), 0.0);
+    }
+
+    #[test]
+    fn current_duration_only_when_running() {
+        let mut meeting = Meeting::new();
+        assert_eq!(meeting.current_duration(), Duration::ZERO);
+        meeting.start();
+        sleep(Duration::from_millis(5));
+        assert!(meeting.current_duration() > Duration::ZERO);
+    }
+}
