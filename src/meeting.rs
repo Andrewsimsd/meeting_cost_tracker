@@ -6,7 +6,7 @@ use crate::model::EmployeeCategory;
 /// Tracks a running meeting's configuration and state.
 #[derive(Debug)]
 pub struct Meeting {
-    attendees: HashMap<String, (f64, u32)>, // title -> (salary, count)
+    attendees: HashMap<EmployeeCategory, u32>,
     start_time: Option<Instant>,
     elapsed: Duration,
     running: bool,
@@ -49,7 +49,7 @@ impl Meeting {
     /// ```
     /// use meeting_cost_tracker::{EmployeeCategory, Meeting};
     /// let mut meeting = Meeting::new();
-    /// let cat = EmployeeCategory::new("Engineer", 100_000.0).unwrap();
+    /// let cat = EmployeeCategory::new("Engineer", 100_000).unwrap();
     /// meeting.add_attendee(&cat, 3);
     /// ```
     ///
@@ -65,11 +65,8 @@ impl Meeting {
     /// # See Also
     /// * [`Meeting::remove_attendee`]
     pub fn add_attendee(&mut self, category: &EmployeeCategory, count: u32) {
-        let entry = self
-            .attendees
-            .entry(category.title().to_string())
-            .or_insert((category.salary(), 0));
-        entry.1 += count;
+        let entry = self.attendees.entry(category.clone()).or_insert(0);
+        *entry += count;
     }
 
     /// Removes up to `count` attendees of the given title from the meeting.
@@ -78,7 +75,7 @@ impl Meeting {
     /// ## Example
     /// ```
     /// use meeting_cost_tracker::{EmployeeCategory, Meeting};
-    /// let cat = EmployeeCategory::new("Dev", 90_000.0).unwrap();
+    /// let cat = EmployeeCategory::new("Dev", 90_000).unwrap();
     /// let mut meeting = Meeting::new();
     /// meeting.add_attendee(&cat, 2);
     /// meeting.remove_attendee("Dev", 1);
@@ -96,11 +93,13 @@ impl Meeting {
     /// # See Also
     /// * [`Meeting::add_attendee`]
     pub fn remove_attendee(&mut self, title: &str, count: u32) {
-        if let Some(entry) = self.attendees.get_mut(title) {
-            if entry.1 <= count {
-                self.attendees.remove(title);
-            } else {
-                entry.1 -= count;
+        if let Some(key) = self.attendees.keys().find(|c| c.title() == title).cloned() {
+            if let Some(entry) = self.attendees.get_mut(&key) {
+                if *entry <= count {
+                    self.attendees.remove(&key);
+                } else {
+                    *entry -= count;
+                }
             }
         }
     }
@@ -112,11 +111,11 @@ impl Meeting {
     /// ## Example
     /// ```
     /// use meeting_cost_tracker::{EmployeeCategory, Meeting};
-    /// let cat = EmployeeCategory::new("QA", 80_000.0).unwrap();
+    /// let cat = EmployeeCategory::new("QA", 80_000).unwrap();
     /// let mut meeting = Meeting::new();
     /// meeting.add_attendee(&cat, 1);
-    /// for (title, (salary, count)) in meeting.attendees() {
-    ///     println!("{} - {} x ${}", title, count, salary);
+    /// for (cat, count) in meeting.attendees() {
+    ///     println!("{} - {} x ${}", cat.title(), count, cat.salary());
     /// }
     /// ```
     ///
@@ -126,12 +125,12 @@ impl Meeting {
     ///
     /// # Returns
     ///
-    /// An iterator over `(title, (salary, count))` entries.
+    /// An iterator over `(EmployeeCategory, count)` entries.
     ///
     /// # See Also
     /// * [`Meeting::add_attendee`]
     /// * [`Meeting::remove_attendee`]
-    pub fn attendees(&self) -> impl Iterator<Item = (&String, &(f64, u32))> {
+    pub fn attendees(&self) -> impl Iterator<Item = (&EmployeeCategory, &u32)> {
         self.attendees.iter()
     }
 
@@ -202,7 +201,7 @@ impl Meeting {
     /// ```
     /// use meeting_cost_tracker::{EmployeeCategory, Meeting};
     /// let mut meeting = Meeting::new();
-    /// let cat = EmployeeCategory::new("Engineer", 120_000.0).unwrap();
+    /// let cat = EmployeeCategory::new("Engineer", 120_000).unwrap();
     /// meeting.add_attendee(&cat, 2);
     /// meeting.reset();
     /// assert_eq!(meeting.total_cost(), 0.0);
@@ -261,7 +260,7 @@ impl Meeting {
     /// ```
     /// use meeting_cost_tracker::{EmployeeCategory, Meeting};
     /// let mut meeting = Meeting::new();
-    /// let cat = EmployeeCategory::new("Engineer", 100_000.0).unwrap();
+    /// let cat = EmployeeCategory::new("Engineer", 100_000).unwrap();
     /// meeting.add_attendee(&cat, 1);
     /// meeting.start();
     /// std::thread::sleep(std::time::Duration::from_millis(10));
@@ -287,11 +286,7 @@ impl Meeting {
         let millis = self.duration().as_millis() as f64;
         self.attendees
             .iter()
-            .map(|(_, (salary, count))| {
-                // 2000 work hours per year, 60 mins per hours, 60 secs per hour, 1000 ms per second.
-                let cost_per_ms = salary / (2000.0 * 60.0 * 60.0 * 1000.0);
-                cost_per_ms * f64::from(*count) * millis
-            })
+            .map(|(cat, count)| cat.cost_per_millisecond() * f64::from(*count) * millis)
             .sum()
     }
 

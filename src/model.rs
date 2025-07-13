@@ -14,10 +14,10 @@ pub enum EmployeeCategoryError {
 }
 
 /// Represents an employee category (e.g., Engineer, Manager) with a yearly salary.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EmployeeCategory {
     title: String,
-    salary: f64,
+    salary: u64,
 }
 
 impl EmployeeCategory {
@@ -32,7 +32,7 @@ impl EmployeeCategory {
     ///
     /// ```
     /// use meeting_cost_tracker::EmployeeCategory;
-    /// let category = EmployeeCategory::new("Engineer", 120_000.0).unwrap();
+    /// let category = EmployeeCategory::new("Engineer", 120_000).unwrap();
     /// assert_eq!(category.title(), "Engineer");
     /// ```
     ///
@@ -48,12 +48,12 @@ impl EmployeeCategory {
     /// # Returns
     ///
     /// A new [`EmployeeCategory`] on success.
-    pub fn new<T: Into<String>>(title: T, salary: f64) -> Result<Self, EmployeeCategoryError> {
+    pub fn new<T: Into<String>>(title: T, salary: u64) -> Result<Self, EmployeeCategoryError> {
         let title = title.into();
         if title.trim().is_empty() {
             return Err(EmployeeCategoryError::EmptyTitle);
         }
-        if salary <= 0.0 {
+        if salary == 0 {
             return Err(EmployeeCategoryError::InvalidSalary);
         }
         Ok(Self { title, salary })
@@ -64,7 +64,7 @@ impl EmployeeCategory {
     /// ## Example
     /// ```
     /// use meeting_cost_tracker::EmployeeCategory;
-    /// let cat = EmployeeCategory::new("Designer", 80_000.0).unwrap();
+    /// let cat = EmployeeCategory::new("Designer", 80_000).unwrap();
     /// assert_eq!(cat.title(), "Designer");
     /// ```
     ///
@@ -88,8 +88,8 @@ impl EmployeeCategory {
     /// ## Example
     /// ```
     /// use meeting_cost_tracker::EmployeeCategory;
-    /// let cat = EmployeeCategory::new("Engineer", 100_000.0).unwrap();
-    /// assert_eq!(cat.salary(), 100_000.0);
+    /// let cat = EmployeeCategory::new("Engineer", 100_000).unwrap();
+    /// assert_eq!(cat.salary(), 100_000);
     /// ```
     ///
     /// # Arguments
@@ -104,7 +104,7 @@ impl EmployeeCategory {
     /// * [`EmployeeCategory::title`]
     /// * [`EmployeeCategory::cost_per_millisecond`]
     #[must_use]
-    pub fn salary(&self) -> f64 {
+    pub fn salary(&self) -> u64 {
         self.salary
     }
 
@@ -113,7 +113,7 @@ impl EmployeeCategory {
     /// ## Example
     /// ```
     /// use meeting_cost_tracker::EmployeeCategory;
-    /// let cat = EmployeeCategory::new("Analyst", 90_000.0).unwrap();
+    /// let cat = EmployeeCategory::new("Analyst", 90_000).unwrap();
     /// let ms = cat.cost_per_millisecond();
     /// assert!(ms > 0.0);
     /// ```
