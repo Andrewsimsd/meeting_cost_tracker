@@ -68,8 +68,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Constraint::Length(3),  // title
                     Constraint::Length(1),  // status line
                     Constraint::Length(3),  // cost display
-                    Constraint::Length(3),  // input/help
                     Constraint::Min(1),     // lists
+                    Constraint::Length(3),  // input/help
                 ])
                 .split(size);
 
@@ -109,12 +109,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Mode::AddCategory => {
                     let input_widget = Paragraph::new(input_text.as_str())
                         .block(Block::default().title("Enter: Title:Salary").borders(Borders::ALL));
-                    f.render_widget(input_widget, chunks[3]);
+                    f.render_widget(input_widget, chunks[4]);
                 }
                 Mode::DeleteCategory => {
                     let input_widget = Paragraph::new(input_text.as_str())
                         .block(Block::default().title("Enter title to delete").borders(Borders::ALL));
-                    f.render_widget(input_widget, chunks[3]);
+                    f.render_widget(input_widget, chunks[4]);
                 }
                 Mode::View => {
                     let help = Paragraph::new(Line::from(vec![
@@ -124,7 +124,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         ),
                     ]))
                     .block(Block::default().borders(Borders::ALL).title("Controls"));
-                    f.render_widget(help, chunks[3]);
+                    f.render_widget(help, chunks[4]);
                 }
                 Mode::AddAttendee => {
                     let input_widget = Paragraph::new(input_text.as_str())
@@ -133,19 +133,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 .title("Enter: Title[:Count]")
                                 .borders(Borders::ALL),
                         );
-                    f.render_widget(input_widget, chunks[3]);
+                    f.render_widget(input_widget, chunks[4]);
                 }
                 Mode::RemoveAttendee => {
                     let input_widget = Paragraph::new(input_text.as_str())
                         .block(Block::default().title("Enter: Title:Count to remove").borders(Borders::ALL));
-                    f.render_widget(input_widget, chunks[3]);
+                    f.render_widget(input_widget, chunks[4]);
                 }
             }
 
             let lists = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .split(chunks[4]);
+                .split(chunks[3]);
 
             let category_list: Vec<Line> = categories
                 .iter()
@@ -232,7 +232,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                                         }
                                         None => (input_text.trim(), 1),
                                     };
-                                    if let Some(cat) = categories.iter().find(|c| c.title() == title) {
+                                    if let Some(cat) =
+                                        categories.iter().find(|c| c.title() == title)
+                                    {
                                         meeting.add_attendee(cat, count);
                                     }
                                 }
