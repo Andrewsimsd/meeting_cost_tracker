@@ -97,7 +97,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             f.render_widget(status, chunks[1]);
 
             let cost_widget = Paragraph::new(Line::from(Span::styled(
-                format!("${:.2}", cost_display),
+                format!("${cost_display:.2}"),
                 Style::default()
                     .fg(Color::Green)
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
