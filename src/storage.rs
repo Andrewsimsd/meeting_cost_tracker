@@ -109,3 +109,35 @@ pub fn save_categories<P: AsRef<Path>>(
     file.write_all(toml.as_bytes())?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn load_nonexistent_returns_empty() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path().to_path_buf();
+        drop(tmp); // remove file so it doesn't exist
+        let cats = load_categories(&path).unwrap();
+        assert!(cats.is_empty());
+    }
+
+    #[test]
+    fn save_and_load_round_trip() {
+        let tmp = NamedTempFile::new().unwrap();
+        let cats = vec![EmployeeCategory::new("A", 1).unwrap()];
+        save_categories(tmp.path(), &cats).unwrap();
+        let loaded = load_categories(tmp.path()).unwrap();
+        assert_eq!(cats, loaded);
+    }
+
+    #[test]
+    fn load_invalid_toml_errors() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        tmp.write_all(b"invalid_toml").unwrap();
+        let res = load_categories(tmp.path());
+        assert!(res.is_err());
+    }
+}

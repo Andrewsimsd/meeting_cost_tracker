@@ -131,9 +131,41 @@ impl EmployeeCategory {
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn cost_per_millisecond(&self) -> f64 {
-        // 2000 work hours per year, 60 mins per hour, 60 secs per minute, 1000 ms per second.
-        // Use floating point division to avoid truncation during the calculation.
-        let denominator = 2000.0 * 60.0 * 60.0 * 1000.0;
-        self.salary as f64 / denominator
+            // 2000 work hours per year, 60 mins per hour, 60 secs per minute, 1000 ms per second.
+            // Use floating point division to avoid truncation during the calculation.
+            let denominator = 2000.0 * 60.0 * 60.0 * 1000.0;
+            self.salary as f64 / denominator
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_validates_input() {
+        assert!(EmployeeCategory::new("", 100).is_err());
+        assert!(EmployeeCategory::new("dev", 0).is_err());
+        let cat = EmployeeCategory::new("dev", 1).unwrap();
+        assert_eq!(cat.title(), "dev");
+        assert_eq!(cat.salary(), 1);
+    }
+
+    #[test]
+    fn accessors_work() {
+        let cat = EmployeeCategory::new("manager", 10_000).unwrap();
+        assert_eq!(cat.title(), "manager");
+        assert_eq!(cat.salary(), 10_000);
+    }
+
+    #[test]
+    fn cost_per_millisecond_calculates_float() {
+        let cat = EmployeeCategory::new("engineer", 720_000_000).unwrap();
+        let cost = cat.cost_per_millisecond();
+        assert!((cost - 0.1).abs() < f64::EPSILON);
+
+        let small = EmployeeCategory::new("low", 100_000).unwrap();
+        let cost = small.cost_per_millisecond();
+        assert!(cost > 0.0);
     }
 }
