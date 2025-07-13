@@ -9,7 +9,7 @@ use crossterm::terminal::{
 };
 use meeting_cost_tracker::{load_categories, save_categories, EmployeeCategory, Meeting};
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
@@ -64,10 +64,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .direction(Direction::Vertical)
                 .margin(1)
                 .constraints([
-                    Constraint::Length(3),
-                    Constraint::Length(3),
-                    Constraint::Length(3),
-                    Constraint::Min(1),
+                    Constraint::Length(3),  // title
+                    Constraint::Length(1),  // status line
+                    Constraint::Length(3),  // cost display
+                    Constraint::Length(3),  // input/help
+                    Constraint::Min(1),     // lists
                 ])
                 .split(size);
 
@@ -78,55 +79,77 @@ fn main() -> Result<(), Box<dyn Error>> {
             let running = meeting.is_running();
             let duration = meeting.duration();
             let cost = meeting.total_cost();
+            let cost_display = if cost == 0.0 { 0.0 } else { cost };
 
-            let info = Paragraph::new(Line::from(vec![
-                Span::raw(format!(
-                    "[{}] Duration: {:.1?}  Cost: ${:.2}",
-                    if running { "Running" } else { "Stopped" },
-                    duration,
-                    cost
-                )),
+            let status = Paragraph::new(Line::from(vec![
+                Span::styled(
+                    format!(
+                        "[{}] Duration: {:.1?}",
+                        if running { "Running" } else { "Stopped" },
+                        duration
+                    ),
+                    Style::default()
+                        .fg(if running { Color::Green } else { Color::Red })
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]));
-            f.render_widget(info, chunks[1]);
+            f.render_widget(status, chunks[1]);
+
+            let cost_widget = Paragraph::new(Line::from(Span::styled(
+                format!("${:.2}", cost_display),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            )))
+            .alignment(Alignment::Center);
+            f.render_widget(cost_widget, chunks[2]);
 
             match mode {
                 Mode::AddCategory => {
                     let input_widget = Paragraph::new(input_text.as_str())
                         .block(Block::default().title("Enter: Title:Salary").borders(Borders::ALL));
-                    f.render_widget(input_widget, chunks[2]);
+                    f.render_widget(input_widget, chunks[3]);
                 }
                 Mode::DeleteCategory => {
                     let input_widget = Paragraph::new(input_text.as_str())
                         .block(Block::default().title("Enter title to delete").borders(Borders::ALL));
-                    f.render_widget(input_widget, chunks[2]);
+                    f.render_widget(input_widget, chunks[3]);
                 }
                 Mode::View => {
                     let help = Paragraph::new(Line::from(vec![
-                        Span::raw("[s] Start  [t] Stop  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [q] Quit"),
+                        Span::styled(
+                            "[s] Start  [t] Stop  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [q] Quit",
+                            Style::default().fg(Color::Yellow),
+                        ),
                     ]))
                     .block(Block::default().borders(Borders::ALL).title("Controls"));
-                    f.render_widget(help, chunks[2]);
+                    f.render_widget(help, chunks[3]);
                 }
                 Mode::AddAttendee => {
                     let input_widget = Paragraph::new(input_text.as_str())
                         .block(Block::default().title("Enter: Title:Count").borders(Borders::ALL));
-                    f.render_widget(input_widget, chunks[2]);
+                    f.render_widget(input_widget, chunks[3]);
                 }
                 Mode::RemoveAttendee => {
                     let input_widget = Paragraph::new(input_text.as_str())
                         .block(Block::default().title("Enter: Title:Count to remove").borders(Borders::ALL));
-                    f.render_widget(input_widget, chunks[2]);
+                    f.render_widget(input_widget, chunks[3]);
                 }
             }
 
             let lists = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .split(chunks[3]);
+                .split(chunks[4]);
 
             let category_list: Vec<Line> = categories
                 .iter()
-                .map(|c| Line::from(Span::raw(format!("{}: ${}", c.title(), c.salary()))))
+                .map(|c| {
+                    Line::from(Span::styled(
+                        format!("{}: ${}", c.title(), c.salary()),
+                        Style::default().fg(Color::Cyan),
+                    ))
+                })
                 .collect();
             let list_widget = Paragraph::new(category_list)
                 .block(Block::default().borders(Borders::ALL).title("Employee Categories"));
@@ -134,7 +157,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let meeting_list: Vec<Line> = meeting
                 .attendees()
-                .map(|(cat, count)| Line::from(Span::raw(format!("{} x {}", cat.title(), count))))
+                .map(|(cat, count)| {
+                    Line::from(Span::styled(
+                        format!("{cat.title()} x {count}"),
+                        Style::default().fg(Color::Magenta),
+                    ))
+                })
                 .collect();
             let meeting_widget = Paragraph::new(meeting_list)
                 .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
