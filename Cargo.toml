@@ -10,6 +10,7 @@ homepage = "https://github.com/Andrewsimsd/meeting_cost_tracker"
 readme = "README.md"
 keywords = ["tui", "ratatui", "meeting", "salary", "tracker"]
 categories = ["command-line-utilities", "visualization"]
+default-run = "mct"
 
 [dependencies]
 ratatui = "0.29"
@@ -23,7 +24,7 @@ assert_cmd = "2.0"
 predicates = "3.1"
 
 [[bin]]
-name = "meeting_cost_tracker"
+name = "mct"
 path = "src/main.rs"
 
 [profile.release]

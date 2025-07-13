@@ -25,8 +25,11 @@ Running the provided binary gives an interactive interface for adding employee
 categories and tracking a meeting live:
 
 ```console
-$ cargo run --release --bin meeting_cost_tracker
+$ cargo run --release --bin mct
 ```
+
+After installing the crate with `cargo install --path .`, you can run the TUI
+directly using the `mct` command.
 
 ## See Also
 
