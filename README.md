@@ -31,6 +31,11 @@ $ cargo run --release --bin mct
 After installing the crate with `cargo install --path .`, you can run the TUI
 directly using the `mct` command.
 
+The interface responds to several keyboard shortcuts:
+`s` to start, `t` to stop, `c` to reset the meeting, `a` to add a category,
+`d` to delete a category, `e` to add attendees, `r` to remove attendees, and
+`q` to quit.
+
 ## See Also
 
 - [`Meeting`](src/meeting.rs) – core meeting logic.
