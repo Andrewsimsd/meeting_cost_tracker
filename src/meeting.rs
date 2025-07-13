@@ -288,7 +288,8 @@ impl Meeting {
         self.attendees
             .iter()
             .map(|(_, (salary, count))| {
-                let cost_per_ms = salary / (365.25 * 24.0 * 60.0 * 60.0 * 1000.0);
+                // 2000 work hours per year, 60 mins per hours, 60 secs per hour, 1000 ms per second.
+                let cost_per_ms = salary / (2000.0 * 60.0 * 60.0 * 1000.0);
                 cost_per_ms * f64::from(*count) * millis
             })
             .sum()
