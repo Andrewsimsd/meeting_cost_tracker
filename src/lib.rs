@@ -21,6 +21,9 @@ mod meeting;
 mod model;
 mod storage;
 
+/// Core meeting functionality including timers and cost computation.
 pub use meeting::Meeting;
+/// Represents an employee salary category.
 pub use model::EmployeeCategory;
+/// Persistence helpers for reading and writing categories as TOML.
 pub use storage::{load_categories, save_categories};
