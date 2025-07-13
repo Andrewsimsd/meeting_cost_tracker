@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "meeting_cost_tracker"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "assert_cmd",
  "crossterm 0.29.0",
