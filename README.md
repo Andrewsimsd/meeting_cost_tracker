@@ -1,5 +1,4 @@
 # Meeting Cost Tracker
-
 [![Crates.io](https://img.shields.io/crates/v/meeting_cost_tracker.svg)](https://crates.io/crates/meeting_cost_tracker)
 [![Documentation](https://docs.rs/meeting_cost_tracker/badge.svg)](https://docs.rs/meeting_cost_tracker)
 [![CI](https://github.com/Andrewsimsd/duplicate-file-finder/actions/workflows/CI.yml/badge.svg)](https://github.com/Andrewsimsd/duplicate-file-finder/actions)
@@ -9,6 +8,8 @@
 **Meeting Cost Tracker** provides a Rust library and accompanying terminal user interface (TUI) for monitoring the real‑time cost of meetings. Costs are calculated from each attendee's salary and the time elapsed.
 
 The library is lightweight and can be embedded in your own tools. A fully featured TUI application is also provided for quick tracking from the command line.
+
+![demo](readme_resources/demo.gif)
 
 ## Installation
 
