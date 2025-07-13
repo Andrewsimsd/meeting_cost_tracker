@@ -97,7 +97,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             f.render_widget(status, chunks[1]);
 
             let cost_widget = Paragraph::new(Line::from(Span::styled(
-                format!("${:.2}", cost_display),
+                format!("${cost_display:.2}"),
                 Style::default()
                     .fg(Color::Green)
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
@@ -128,7 +128,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
                 Mode::AddAttendee => {
                     let input_widget = Paragraph::new(input_text.as_str())
-                        .block(Block::default().title("Enter: Title:Count").borders(Borders::ALL));
+                        .block(
+                            Block::default()
+                                .title("Enter: Title[:Count]")
+                                .borders(Borders::ALL),
+                        );
                     f.render_widget(input_widget, chunks[3]);
                 }
                 Mode::RemoveAttendee => {
@@ -221,15 +225,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                                     categories.retain(|c| c.title() != title);
                                 }
                                 Mode::AddAttendee => {
-                                    if let Some((title, count_str)) = input_text.split_once(':') {
-                                        if let Ok(count) = count_str.trim().parse::<u32>() {
-                                            if let Some(cat) = categories
-                                                .iter()
-                                                .find(|c| c.title() == title.trim())
-                                            {
-                                                meeting.add_attendee(&cat.clone(), count);
-                                            }
+                                    let (title, count) = match input_text.split_once(':') {
+                                        Some((t, c_str)) => {
+                                            let count = c_str.trim().parse::<u32>().unwrap_or(1);
+                                            (t.trim(), count)
                                         }
+                                        None => (input_text.trim(), 1),
+                                    };
+                                    if let Some(cat) = categories.iter().find(|c| c.title() == title) {
+                                        meeting.add_attendee(cat, count);
                                     }
                                 }
                                 Mode::RemoveAttendee => {
