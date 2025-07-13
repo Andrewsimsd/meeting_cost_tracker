@@ -1,11 +1,34 @@
 # Meeting Cost Tracker
 
-`meeting_cost_tracker` provides a small library and optional terminal user
-interface for monitoring the real-time cost of meetings. It calculates cost
-based on the salaries of attendees and the elapsed time of a meeting.
+**Meeting Cost Tracker** provides a Rust library and accompanying terminal user interface (TUI) for monitoring the real‑time cost of meetings. Costs are calculated from each attendee's salary and the time elapsed.
 
-The library is intended for integration into other tools but also ships with a
-TUI binary that demonstrates its capabilities.
+The library is lightweight and can be embedded in your own tools. A fully featured TUI application is also provided for quick tracking from the command line.
+
+## Installation
+
+### From crates.io
+
+Add the library to your project with:
+
+```console
+$ cargo add meeting_cost_tracker
+```
+
+Install the standalone TUI application:
+
+```console
+$ cargo install meeting_cost_tracker
+```
+
+### From source
+
+Clone the repository and build:
+
+```console
+$ git clone https://github.com/Andrewsimsd/meeting_cost_tracker
+$ cd meeting_cost_tracker
+$ cargo install --path .
+```
 
 ## Example
 
@@ -21,24 +44,35 @@ meeting.stop();
 println!("Cost: ${:.2}", meeting.total_cost());
 ```
 
-Running the provided binary gives an interactive interface for adding employee
-categories and tracking a meeting live:
+## TUI Usage
+
+Run the interactive tracker with:
 
 ```console
-$ cargo run --release --bin mct
+$ mct
 ```
 
-After installing the crate with `cargo install --path .`, you can run the TUI
-directly using the `mct` command.
+Keyboard shortcuts:
 
-The interface responds to several keyboard shortcuts:
-`s` to start, `t` to stop, `c` to reset the meeting, `a` to add a category,
-`d` to delete a category, `e` to add attendees, `r` to remove attendees,
-`p` to toggle salary visibility, and `q` to quit.
+- **s** – start the meeting
+- **t** – stop the meeting
+- **c** – reset accumulated time and cost
+- **a** – add a new salary category
+- **d** – delete an existing category
+- **e** – add attendees
+- **r** – remove attendees
+- **p** – toggle salary visibility
+- **q** – quit
+
+Categories are persisted to `categories.toml` in the current directory.
 
 ## See Also
 
-- [`Meeting`](src/meeting.rs) – core meeting logic.
-- [`EmployeeCategory`](src/model.rs) – employee salary representation.
-- [`load_categories`](src/storage.rs) – persistence helpers.
+- [`Meeting`](src/meeting.rs) – core meeting logic
+- [`EmployeeCategory`](src/model.rs) – employee salary representation
+- [`load_categories`](src/storage.rs) – persistence helpers
+
+## License
+
+Licensed under either the MIT license or Apache License 2.0 at your option.
 
