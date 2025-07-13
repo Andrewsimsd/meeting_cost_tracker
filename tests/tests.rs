@@ -31,6 +31,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::float_cmp)]
     fn test_meeting_reset() {
         let cat = EmployeeCategory::new("Analyst", 90_000.0).unwrap();
         let mut meeting = Meeting::new();

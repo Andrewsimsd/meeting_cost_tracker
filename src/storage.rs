@@ -45,8 +45,8 @@ struct CategoryWrapper {
 ///
 /// # Returns
 ///
-/// A collection of [`EmployeeCategory`] values.
-
+/// A collection of [`EmployeeCategory`] values
+///
 /// # Errors
 ///
 /// Returns a [`StorageError`] if the file cannot be read or if the contents
@@ -85,7 +85,7 @@ pub fn load_categories(path: &Path) -> Result<Vec<EmployeeCategory>, StorageErro
 /// # Returns
 ///
 /// Result indicating success or failure.
-
+///
 /// # Errors
 ///
 /// Returns a [`StorageError`] if the file cannot be created or written, or if

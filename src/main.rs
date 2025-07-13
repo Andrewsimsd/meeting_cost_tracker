@@ -39,6 +39,7 @@ enum Mode {
 ///
 /// Returns an error if terminal initialization fails or if the category
 /// database cannot be loaded or saved.
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<(), Box<dyn Error>> {
     let db_path = PathBuf::from("categories.toml");
     let mut categories = load_categories(&db_path)?;
@@ -133,7 +134,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let meeting_list: Vec<Line> = meeting
                 .attendees()
-                .map(|(title, (_, count))| Line::from(Span::raw(format!("{} x {}", title, count))))
+                .map(|(title, (_, count))| Line::from(Span::raw(format!("{title} x {count}"))))
                 .collect();
             let meeting_widget = Paragraph::new(meeting_list)
                 .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
@@ -209,7 +210,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                         }
                                     }
                                 }
-                                _ => {}
+                                Mode::View => {}
                             }
                             mode = Mode::View;
                         }
