@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Constraint::Length(1),  // status line
                     Constraint::Length(3),  // cost display
                     Constraint::Min(1),     // lists
-                    Constraint::Length(3),  // input/help
+                    Constraint::Length(6),  // input/help
                 ])
                 .split(size);
 
@@ -118,13 +118,26 @@ fn main() -> Result<(), Box<dyn Error>> {
                     f.render_widget(input_widget, chunks[4]);
                 }
                 Mode::View => {
-                    let help = Paragraph::new(Line::from(vec![
-                        Span::styled(
-                            "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [p] Toggle Salaries  [q] Quit",
+                    let help_lines = vec![
+                        Line::from(Span::styled(
+                            "[s] Start  [t] Stop  [c] Reset",
                             Style::default().fg(Color::Yellow),
-                        ),
-                    ]))
-                    .block(Block::default().borders(Borders::ALL).title("Controls"));
+                        )),
+                        Line::from(Span::styled(
+                            "[a] Add Category  [d] Delete Category",
+                            Style::default().fg(Color::Yellow),
+                        )),
+                        Line::from(Span::styled(
+                            "[e] Add Employee  [r] Remove Employee",
+                            Style::default().fg(Color::Yellow),
+                        )),
+                        Line::from(Span::styled(
+                            "[p] Toggle Salaries  [q] Quit",
+                            Style::default().fg(Color::Yellow),
+                        )),
+                    ];
+                    let help = Paragraph::new(help_lines)
+                        .block(Block::default().borders(Borders::ALL).title("Controls"));
                     f.render_widget(help, chunks[4]);
                 }
                 Mode::AddAttendee => {
