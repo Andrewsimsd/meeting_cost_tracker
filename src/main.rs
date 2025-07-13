@@ -25,14 +25,14 @@ fn column_lines(items: &[String], width: u16, style: Style) -> Vec<Line> {
     }
 
     let max_len = items.iter().map(|s| s.len()).max().unwrap_or(0) as u16 + 2;
-    let cols = std::cmp::max(1, width / max_len);
-    let rows = (items.len() as u16 + cols - 1) / cols;
+    let cols = std::cmp::max(1, width / max_len) as usize;
+    let rows = (items.len() + cols - 1) / cols;
 
     let mut lines = Vec::new();
     for row in 0..rows {
         let mut spans = Vec::new();
         for col in 0..cols {
-            let idx = row as usize + col as usize * rows as usize;
+            let idx = row * cols + col;
             if let Some(item) = items.get(idx) {
                 spans.push(Span::styled(
                     format!("{item:<width$}", width = max_len as usize),
