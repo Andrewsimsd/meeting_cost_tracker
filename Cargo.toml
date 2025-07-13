@@ -2,9 +2,11 @@
 name = "meeting_cost_tracker"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <you@example.com>"]
+authors = ["Andrew Sims andrew,simsd.@gmail.com"]
 description = "A terminal UI tool to track meeting cost in real time based on employee salaries."
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/Andrewsimsd/meeting_cost_tracker"
+homepage = "https://github.com/Andrewsimsd/meeting_cost_tracker"
 readme = "README.md"
 repository = "https://github.com/yourusername/meeting_cost_tracker"
 keywords = ["tui", "ratatui", "meeting", "salary", "tracker"]
