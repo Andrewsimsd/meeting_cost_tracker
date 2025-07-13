@@ -21,7 +21,7 @@ mod tests {
     fn test_meeting_cost_accumulation() {
         let cat = EmployeeCategory::new("Dev", 120_000.0).unwrap();
         let mut meeting = Meeting::new();
-        meeting.add_attendee(cat.clone(), 2);
+        meeting.add_attendee(&cat.clone(), 2);
         meeting.start();
         std::thread::sleep(Duration::from_millis(50));
         meeting.stop();
@@ -34,7 +34,7 @@ mod tests {
     fn test_meeting_reset() {
         let cat = EmployeeCategory::new("Analyst", 90_000.0).unwrap();
         let mut meeting = Meeting::new();
-        meeting.add_attendee(cat.clone(), 1);
+        meeting.add_attendee(&cat.clone(), 1);
         meeting.start();
         std::thread::sleep(Duration::from_millis(20));
         meeting.stop();
@@ -47,7 +47,7 @@ mod tests {
     fn test_add_and_remove_attendees() {
         let cat = EmployeeCategory::new("QA", 80_000.0).unwrap();
         let mut meeting = Meeting::new();
-        meeting.add_attendee(cat.clone(), 3);
+        meeting.add_attendee(&cat.clone(), 3);
         assert_eq!(meeting.attendees().next().unwrap().1 .1, 3);
         meeting.remove_attendee(cat.title(), 2);
         assert_eq!(meeting.attendees().next().unwrap().1 .1, 1);

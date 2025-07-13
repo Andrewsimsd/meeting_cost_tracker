@@ -11,7 +11,7 @@
 //!
 //! let category = EmployeeCategory::new("Engineer", 120_000.0).unwrap();
 //! let mut meeting = Meeting::new();
-//! meeting.add_attendee(category.clone(), 3);
+//! meeting.add_attendee(&category.clone(), 3);
 //! meeting.start();
 //! std::thread::sleep(std::time::Duration::from_millis(500));
 //! meeting.stop();
