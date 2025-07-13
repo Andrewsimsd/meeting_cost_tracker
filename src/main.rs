@@ -134,7 +134,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let meeting_list: Vec<Line> = meeting
                 .attendees()
-                .map(|(title, (_, count))| Line::from(Span::raw(format!("{title} x {count}"))))
+                .map(|(cat, count)| Line::from(Span::raw(format!("{} x {}", cat.title(), count))))
                 .collect();
             let meeting_widget = Paragraph::new(meeting_list)
                 .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
@@ -178,7 +178,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             match mode {
                                 Mode::AddCategory => {
                                     if let Some((title, salary_str)) = input_text.split_once(':') {
-                                        if let Ok(salary) = salary_str.trim().parse::<f64>() {
+                                        if let Ok(salary) = salary_str.trim().parse::<u64>() {
                                             if let Ok(cat) =
                                                 EmployeeCategory::new(title.trim(), salary)
                                             {

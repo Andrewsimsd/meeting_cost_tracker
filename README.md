@@ -12,7 +12,7 @@ TUI binary that demonstrates its capabilities.
 ```rust
 use meeting_cost_tracker::{EmployeeCategory, Meeting};
 
-let category = EmployeeCategory::new("Engineer", 120_000.0).unwrap();
+let category = EmployeeCategory::new("Engineer", 120_000).unwrap();
 let mut meeting = Meeting::new();
 meeting.add_attendee(&category, 3);
 meeting.start();
