@@ -14,6 +14,7 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
+use figlet_rs::FIGfont;
 use ratatui::Terminal;
 
 /// UI modes controlling user interaction.
@@ -49,6 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut mode = Mode::View;
     let mut input_text = String::new();
     let mut show_salaries = false;
+    let font = FIGfont::standard().unwrap();
 
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
@@ -68,7 +70,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .constraints([
                     Constraint::Length(3),  // title
                     Constraint::Length(1),  // status line
-                    Constraint::Length(3),  // cost display
+                    Constraint::Length(8),  // cost display
                     Constraint::Min(1),     // lists
                     Constraint::Length(3),  // input/help
                 ])
@@ -97,13 +99,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             ]));
             f.render_widget(status, chunks[1]);
 
-            let cost_widget = Paragraph::new(Line::from(Span::styled(
-                format!("${cost_display:.2}"),
-                Style::default()
-                    .fg(Color::Green)
-                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-            )))
-            .alignment(Alignment::Center);
+            let figure = font
+                .convert(&format!("${cost_display:.2}"))
+                .unwrap_or_else(|| font.convert("0").unwrap());
+            let lines: Vec<Line> = figure
+                .to_string()
+                .lines()
+                .map(|l| Line::from(Span::styled(l.to_string(), Style::default().fg(Color::Green))))
+                .collect();
+            let cost_widget = Paragraph::new(lines).alignment(Alignment::Center);
             f.render_widget(cost_widget, chunks[2]);
 
             match mode {
