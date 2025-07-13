@@ -411,6 +411,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::float_cmp)]
     fn reset_clears_state() {
         let cat = sample_category();
         let mut meeting = Meeting::new();
