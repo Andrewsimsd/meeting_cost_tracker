@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           cd dist
-          zip duplicate_file_finder-${{ matrix.target }}.zip meeting_cost_tracker-${{ matrix.target }}${{ matrix.ext }}
+          zip meeting_cost_tracker-${{ matrix.target }}.zip meeting_cost_tracker-${{ matrix.target }}${{ matrix.ext }}
 
       - name: Zip binary (Windows)
         if: matrix.os == 'windows-latest'
