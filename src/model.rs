@@ -131,7 +131,9 @@ impl EmployeeCategory {
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn cost_per_millisecond(&self) -> f64 {
-        // 2000 work hours per year, 60 mins per hours, 60 secs per hour, 1000 ms per second.
-        (self.salary / (2000 * 60 * 60 * 1000)) as f64
+        // 2000 work hours per year, 60 mins per hour, 60 secs per minute, 1000 ms per second.
+        // Use floating point division to avoid truncation during the calculation.
+        let denominator = 2000.0 * 60.0 * 60.0 * 1000.0;
+        self.salary as f64 / denominator
     }
 }
