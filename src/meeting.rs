@@ -46,7 +46,6 @@ impl Meeting {
     }
 
     /// Returns an iterator over the attendee list.
-    #[must_use]
     pub fn attendees(&self) -> impl Iterator<Item = (&String, &(f64, u32))> {
         self.attendees.iter()
     }
@@ -110,3 +109,9 @@ impl Meeting {
         }
     }
 }
+
+impl Default for Meeting {
+        fn default() -> Self {
+            Self::new()
+        }
+    }

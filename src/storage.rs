@@ -5,9 +5,6 @@ use std::io::{self, Write};
 use crate::model::EmployeeCategory;
 use thiserror::Error;
 
-/// Filename for persistent employee category storage.
-pub const STORAGE_FILE: &str = "categories.toml";
-
 /// Errors that may occur during loading or saving categories.
 #[derive(Debug, Error)]
 pub enum StorageError {
