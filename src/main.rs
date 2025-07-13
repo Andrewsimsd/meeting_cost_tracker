@@ -159,7 +159,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .attendees()
                 .map(|(cat, count)| {
                     Line::from(Span::styled(
-                        format!("{cat.title()} x {count}"),
+                        format!("{} x {}", cat.title(), count),
                         Style::default().fg(Color::Magenta),
                     ))
                 })
