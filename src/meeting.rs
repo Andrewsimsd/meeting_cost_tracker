@@ -5,8 +5,14 @@ use crate::model::EmployeeCategory;
 
 /// Tracks a running meeting's configuration and state.
 #[derive(Debug)]
+struct Attendee {
+    salary: u64,
+    count: u32,
+}
+
+#[derive(Debug)]
 pub struct Meeting {
-    attendees: HashMap<EmployeeCategory, u32>,
+    attendees: HashMap<String, Attendee>,
     start_time: Option<Instant>,
     elapsed: Duration,
     running: bool,
@@ -65,8 +71,14 @@ impl Meeting {
     /// # See Also
     /// * [`Meeting::remove_attendee`]
     pub fn add_attendee(&mut self, category: &EmployeeCategory, count: u32) {
-        let entry = self.attendees.entry(category.clone()).or_insert(0);
-        *entry += count;
+        let entry = self
+            .attendees
+            .entry(category.title().to_string())
+            .or_insert_with(|| Attendee {
+                salary: category.salary(),
+                count: 0,
+            });
+        entry.count += count;
     }
 
     /// Removes up to `count` attendees of the given title from the meeting.
@@ -93,20 +105,18 @@ impl Meeting {
     /// # See Also
     /// * [`Meeting::add_attendee`]
     pub fn remove_attendee(&mut self, title: &str, count: u32) {
-        if let Some(key) = self.attendees.keys().find(|c| c.title() == title).cloned() {
-            if let Some(entry) = self.attendees.get_mut(&key) {
-                if *entry <= count {
-                    self.attendees.remove(&key);
-                } else {
-                    *entry -= count;
-                }
+        if let Some(entry) = self.attendees.get_mut(title) {
+            if entry.count <= count {
+                self.attendees.remove(title);
+            } else {
+                entry.count -= count;
             }
         }
     }
 
     /// Returns an iterator over the attendee list.
     ///
-    /// The iterator yields the employee title along with a tuple `(salary, count)`.
+    /// The iterator yields a tuple of `(title, salary, count)` for each attendee group.
     ///
     /// ## Example
     /// ```
@@ -114,8 +124,8 @@ impl Meeting {
     /// let cat = EmployeeCategory::new("QA", 80_000).unwrap();
     /// let mut meeting = Meeting::new();
     /// meeting.add_attendee(&cat, 1);
-    /// for (cat, count) in meeting.attendees() {
-    ///     println!("{} - {} x ${}", cat.title(), count, cat.salary());
+    /// for (title, salary, count) in meeting.attendees() {
+    ///     println!("{} - {} x ${}", title, count, salary);
     /// }
     /// ```
     ///
@@ -125,13 +135,15 @@ impl Meeting {
     ///
     /// # Returns
     ///
-    /// An iterator over `(EmployeeCategory, count)` entries.
+    /// An iterator over `(title, salary, count)` entries.
     ///
     /// # See Also
     /// * [`Meeting::add_attendee`]
     /// * [`Meeting::remove_attendee`]
-    pub fn attendees(&self) -> impl Iterator<Item = (&EmployeeCategory, &u32)> {
-        self.attendees.iter()
+    pub fn attendees(&self) -> impl Iterator<Item = (&str, u64, &u32)> {
+        self.attendees
+            .iter()
+            .map(|(title, attendee)| (title.as_str(), attendee.salary, &attendee.count))
     }
 
     /// Starts the meeting timer.
@@ -285,8 +297,11 @@ impl Meeting {
     pub fn total_cost(&self) -> f64 {
         let millis = self.duration().as_millis() as f64;
         self.attendees
-            .iter()
-            .map(|(cat, count)| cat.cost_per_millisecond() * f64::from(*count) * millis)
+            .values()
+            .map(|a| {
+                let cost_per_ms = a.salary as f64 / crate::model::MILLIS_PER_WORK_YEAR;
+                cost_per_ms * f64::from(a.count) * millis
+            })
             .sum()
     }
 
@@ -377,9 +392,9 @@ mod tests {
         let mut meeting = Meeting::new();
         meeting.add_attendee(&cat, 2);
         meeting.add_attendee(&cat, 1);
-        assert_eq!(*meeting.attendees().next().unwrap().1, 3);
+        assert_eq!(meeting.attendees().next().unwrap().2, &3);
         meeting.remove_attendee(cat.title(), 1);
-        assert_eq!(*meeting.attendees().next().unwrap().1, 2);
+        assert_eq!(meeting.attendees().next().unwrap().2, &2);
         meeting.remove_attendee(cat.title(), 5);
         assert!(meeting.attendees().next().is_none());
     }
