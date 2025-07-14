@@ -8,7 +8,10 @@ use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, Key
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use meeting_cost_tracker::{load_categories, save_categories, EmployeeCategory, Meeting};
+use meeting_cost_tracker::{
+    load_attendees, load_categories, save_attendees, save_categories, AttendeeInfo,
+    EmployeeCategory, Meeting,
+};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
@@ -28,6 +31,10 @@ enum Mode {
     AddAttendee,
     /// Mode for removing attendees from the [`Meeting`].
     RemoveAttendee,
+    /// Mode for saving attendees to disk.
+    SaveAttendees,
+    /// Mode for loading attendees from disk.
+    LoadAttendees,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -99,7 +106,7 @@ fn render_ui(
             Mode::View => {
                 let help = Paragraph::new(Line::from(vec![
                     Span::styled(
-                        "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [p] Toggle Salaries [q] Quit",
+                        "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [w] Save Attendees  [l] Load Attendees  [p] Toggle Salaries [q] Quit",
                         Style::default().fg(Color::Yellow),
                     ),
                 ]))
@@ -118,6 +125,16 @@ fn render_ui(
             Mode::RemoveAttendee => {
                 let input_widget = Paragraph::new(input_text)
                     .block(Block::default().title("Enter: Title:Count to remove").borders(Borders::ALL));
+                f.render_widget(input_widget, chunks[4]);
+            }
+            Mode::SaveAttendees => {
+                let input_widget = Paragraph::new(input_text)
+                    .block(Block::default().title("Enter file to save").borders(Borders::ALL));
+                f.render_widget(input_widget, chunks[4]);
+            }
+            Mode::LoadAttendees => {
+                let input_widget = Paragraph::new(input_text)
+                    .block(Block::default().title("Enter file to load").borders(Borders::ALL));
                 f.render_widget(input_widget, chunks[4]);
             }
         }
@@ -188,59 +205,99 @@ fn process_key(
                 input_text.clear();
                 *mode = Mode::RemoveAttendee;
             }
+            KeyCode::Char('w') => {
+                input_text.clear();
+                *mode = Mode::SaveAttendees;
+            }
+            KeyCode::Char('l') => {
+                input_text.clear();
+                *mode = Mode::LoadAttendees;
+            }
             KeyCode::Char('p') => *show_salaries = !*show_salaries,
             _ => {}
         },
-        Mode::AddCategory | Mode::DeleteCategory | Mode::AddAttendee | Mode::RemoveAttendee => {
-            match key_event.code {
-                KeyCode::Enter => {
-                    match mode {
-                        Mode::AddCategory => {
-                            if let Some((title, salary_str)) = input_text.split_once(':') {
-                                if let Ok(salary) = salary_str.trim().parse::<u64>() {
-                                    if let Ok(cat) = EmployeeCategory::new(title.trim(), salary) {
-                                        if !categories.iter().any(|c| c.title() == cat.title()) {
-                                            categories.push(cat);
-                                        }
+        Mode::AddCategory
+        | Mode::DeleteCategory
+        | Mode::AddAttendee
+        | Mode::RemoveAttendee
+        | Mode::SaveAttendees
+        | Mode::LoadAttendees => match key_event.code {
+            KeyCode::Enter => {
+                match mode {
+                    Mode::AddCategory => {
+                        if let Some((title, salary_str)) = input_text.split_once(':') {
+                            if let Ok(salary) = salary_str.trim().parse::<u64>() {
+                                if let Ok(cat) = EmployeeCategory::new(title.trim(), salary) {
+                                    if !categories.iter().any(|c| c.title() == cat.title()) {
+                                        categories.push(cat);
                                     }
                                 }
                             }
                         }
-                        Mode::DeleteCategory => {
-                            let title = input_text.trim();
-                            categories.retain(|c| c.title() != title);
+                    }
+                    Mode::DeleteCategory => {
+                        let title = input_text.trim();
+                        categories.retain(|c| c.title() != title);
+                    }
+                    Mode::AddAttendee => {
+                        let (title, count) = match input_text.split_once(':') {
+                            Some((t, c_str)) => match c_str.trim().parse::<u32>() {
+                                Ok(c) => (t.trim(), c),
+                                Err(_) => return,
+                            },
+                            None => (input_text.trim(), 1),
+                        };
+                        if let Some(cat) = categories.iter().find(|c| c.title() == title) {
+                            meeting.add_attendee(cat, count);
                         }
-                        Mode::AddAttendee => {
-                            let (title, count) = match input_text.split_once(':') {
-                                Some((t, c_str)) => match c_str.trim().parse::<u32>() {
-                                    Ok(c) => (t.trim(), c),
-                                    Err(_) => return,
-                                },
-                                None => (input_text.trim(), 1),
-                            };
-                            if let Some(cat) = categories.iter().find(|c| c.title() == title) {
-                                meeting.add_attendee(cat, count);
+                    }
+                    Mode::RemoveAttendee => {
+                        if let Some((title, count_str)) = input_text.split_once(':') {
+                            if let Ok(count) = count_str.trim().parse::<u32>() {
+                                meeting.remove_attendee(title.trim(), count);
                             }
                         }
-                        Mode::RemoveAttendee => {
-                            if let Some((title, count_str)) = input_text.split_once(':') {
-                                if let Ok(count) = count_str.trim().parse::<u32>() {
-                                    meeting.remove_attendee(title.trim(), count);
+                    }
+                    Mode::SaveAttendees => {
+                        let path = PathBuf::from(input_text.trim());
+                        let data: Vec<AttendeeInfo> = meeting
+                            .attendees()
+                            .map(|(t, _s, c)| AttendeeInfo {
+                                title: t.to_string(),
+                                count: *c,
+                            })
+                            .collect();
+                        if let Err(e) = save_attendees(&path, &data) {
+                            let _ = e;
+                        }
+                    }
+                    Mode::LoadAttendees => {
+                        let path = PathBuf::from(input_text.trim());
+                        match load_attendees(&path) {
+                            Ok(entries) => {
+                                meeting.clear_attendees();
+                                for entry in entries {
+                                    if let Some(cat) =
+                                        categories.iter().find(|c| c.title() == entry.title)
+                                    {
+                                        meeting.add_attendee(cat, entry.count);
+                                    }
                                 }
                             }
+                            Err(_) => {}
                         }
-                        Mode::View => {}
                     }
-                    *mode = Mode::View;
+                    Mode::View => {}
                 }
-                KeyCode::Esc => *mode = Mode::View,
-                KeyCode::Char(c) => input_text.push(c),
-                KeyCode::Backspace => {
-                    input_text.pop();
-                }
-                _ => {}
+                *mode = Mode::View;
             }
-        }
+            KeyCode::Esc => *mode = Mode::View,
+            KeyCode::Char(c) => input_text.push(c),
+            KeyCode::Backspace => {
+                input_text.pop();
+            }
+            _ => {}
+        },
     }
 }
 

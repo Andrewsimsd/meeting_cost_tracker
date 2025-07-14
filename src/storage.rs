@@ -28,6 +28,20 @@ struct CategoryWrapper {
     categories: Vec<EmployeeCategory>,
 }
 
+/// Represents a saved attendee entry of a specific title and count.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct AttendeeInfo {
+    /// Title of the attendee category.
+    pub title: String,
+    /// Number of attendees in this category.
+    pub count: u32,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct AttendeesWrapper {
+    attendees: Vec<AttendeeInfo>,
+}
+
 /// Loads employee categories from a TOML file.
 ///
 /// If the file does not exist an empty collection is returned.
@@ -110,6 +124,31 @@ pub fn save_categories<P: AsRef<Path>>(
     Ok(())
 }
 
+/// Loads meeting attendees from a TOML file.
+/// Missing files return an empty collection.
+pub fn load_attendees(path: &Path) -> Result<Vec<AttendeeInfo>, StorageError> {
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let data = fs::read_to_string(path)?;
+    let wrapper: AttendeesWrapper = toml::from_str(&data)?;
+    Ok(wrapper.attendees)
+}
+
+/// Persists meeting attendees to a TOML file.
+pub fn save_attendees<P: AsRef<Path>>(
+    path: P,
+    attendees: &[AttendeeInfo],
+) -> Result<(), StorageError> {
+    let wrapper = AttendeesWrapper {
+        attendees: attendees.to_vec(),
+    };
+    let toml = toml::to_string_pretty(&wrapper)?;
+    let mut file = fs::File::create(path)?;
+    file.write_all(toml.as_bytes())?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,5 +178,17 @@ mod tests {
         tmp.write_all(b"invalid_toml").unwrap();
         let res = load_categories(tmp.path());
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn attendees_round_trip() {
+        let tmp = NamedTempFile::new().unwrap();
+        let attendees = vec![AttendeeInfo {
+            title: "Dev".into(),
+            count: 3,
+        }];
+        save_attendees(tmp.path(), &attendees).unwrap();
+        let loaded = load_attendees(tmp.path()).unwrap();
+        assert_eq!(attendees, loaded);
     }
 }
