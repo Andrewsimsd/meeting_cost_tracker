@@ -49,9 +49,9 @@ mod tests {
         let cat = EmployeeCategory::new("QA", 80_000).unwrap();
         let mut meeting = Meeting::new();
         meeting.add_attendee(&cat, 3);
-        assert_eq!(*meeting.attendees().next().unwrap().1, 3);
+        assert_eq!(meeting.attendees().next().unwrap().2, &3);
         meeting.remove_attendee(cat.title(), 2);
-        assert_eq!(*meeting.attendees().next().unwrap().1, 1);
+        assert_eq!(meeting.attendees().next().unwrap().2, &1);
         meeting.remove_attendee(cat.title(), 1);
         assert!(meeting.attendees().next().is_none());
     }
