@@ -68,10 +68,14 @@ Keyboard shortcuts:
 - **d** – delete an existing category
 - **e** – add attendees
 - **r** – remove attendees
+- **w** – save attendees to a file
+- **l** – load attendees from a file (opens file picker)
 - **p** – toggle salary visibility
 - **q** – quit
 
-Categories are persisted to `categories.toml` in the current directory.
+Categories are persisted to `data/categories.toml` next to the executable.
+Attendee lists can be saved and loaded from the same directory using the **w** key.
+Press **l** to open a file picker showing available attendee lists in that directory.
 
 ## See Also
 

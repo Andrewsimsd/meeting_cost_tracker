@@ -2,7 +2,12 @@
 // main.rs
 #![warn(clippy::pedantic)]
 
-use std::{error::Error, path::PathBuf, time::Duration};
+use std::{
+    error::Error,
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use crossterm::event::{
     self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind,
@@ -10,13 +15,46 @@ use crossterm::event::{
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use meeting_cost_tracker::{load_categories, save_categories, EmployeeCategory, Meeting};
+use meeting_cost_tracker::{
+    load_attendees, load_categories, save_attendees, save_categories, AttendeeInfo,
+    EmployeeCategory, Meeting,
+};
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Alignment, Constraint, Direction, Layout};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use ratatui::Terminal;
+
+/// Returns the directory where persistent data should be stored.
+fn data_dir() -> PathBuf {
+    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
+    let mut dir = exe_path
+        .parent()
+        .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+    dir.push("data");
+    dir
+}
+
+/// Calculates a centered rectangle taking up the given percentage of the parent area.
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
+}
 
 /// UI modes controlling user interaction.
 enum Mode {
@@ -30,9 +68,13 @@ enum Mode {
     AddAttendee,
     /// Mode for removing attendees from the [`Meeting`].
     RemoveAttendee,
+    /// Mode for saving attendees to disk.
+    SaveAttendees,
+    /// Mode for loading attendees from disk.
+    LoadAttendees,
 }
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn render_ui(
     terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
     meeting: &Meeting,
@@ -40,6 +82,8 @@ fn render_ui(
     mode: &Mode,
     input_text: &str,
     show_salaries: bool,
+    files: &[String],
+    selected: usize,
 ) -> std::io::Result<()> {
     terminal.draw(|f| {
         let size = f.area();
@@ -101,7 +145,7 @@ fn render_ui(
             Mode::View => {
                 let help = Paragraph::new(Line::from(vec![
                     Span::styled(
-                        "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [p] Toggle Salaries [q] Quit",
+                        "[s] Start  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [w] Save Attendees  [l] Load Attendees  [p] Toggle Salaries [q] Quit",
                         Style::default().fg(Color::Yellow),
                     ),
                 ]))
@@ -120,6 +164,16 @@ fn render_ui(
             Mode::RemoveAttendee => {
                 let input_widget = Paragraph::new(input_text)
                     .block(Block::default().title("Enter: Title:Count to remove").borders(Borders::ALL));
+                f.render_widget(input_widget, chunks[4]);
+            }
+            Mode::SaveAttendees => {
+                let input_widget = Paragraph::new(input_text)
+                    .block(Block::default().title("Enter filename to save").borders(Borders::ALL));
+                f.render_widget(input_widget, chunks[4]);
+            }
+            Mode::LoadAttendees => {
+                let input_widget = Paragraph::new(input_text)
+                    .block(Block::default().title("Enter filename to load").borders(Borders::ALL));
                 f.render_widget(input_widget, chunks[4]);
             }
         }
@@ -156,10 +210,35 @@ fn render_ui(
         let meeting_widget = Paragraph::new(meeting_list)
             .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
         f.render_widget(meeting_widget, lists[0]);
+
+        if matches!(mode, Mode::LoadAttendees) {
+            let area = centered_rect(50, 50, size);
+            let items: Vec<Line> = if files.is_empty() {
+                vec![Line::from(Span::raw("No attendee files found"))]
+            } else {
+                files
+                    .iter()
+                    .enumerate()
+                    .map(|(i, name)| {
+                        let style = if i == selected {
+                            Style::default().add_modifier(Modifier::REVERSED)
+                        } else {
+                            Style::default()
+                        };
+                        Line::from(Span::styled(name.clone(), style))
+                    })
+                    .collect()
+            };
+            let popup = Paragraph::new(items)
+                .block(Block::default().title("Load attendees").borders(Borders::ALL));
+            f.render_widget(Clear, area);
+            f.render_widget(popup, area);
+        }
     })?;
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn process_key(
     key_event: crossterm::event::KeyEvent,
     mode: &mut Mode,
@@ -167,6 +246,8 @@ fn process_key(
     show_salaries: &mut bool,
     categories: &mut Vec<EmployeeCategory>,
     meeting: &mut Meeting,
+    files: &mut Vec<String>,
+    selected: &mut usize,
 ) {
     match *mode {
         Mode::View => match key_event.code {
@@ -190,59 +271,125 @@ fn process_key(
                 input_text.clear();
                 *mode = Mode::RemoveAttendee;
             }
-            KeyCode::Char('p') => *show_salaries = !*show_salaries,
-            _ => {}
-        },
-        Mode::AddCategory | Mode::DeleteCategory | Mode::AddAttendee | Mode::RemoveAttendee => {
-            match key_event.code {
-                KeyCode::Enter => {
-                    match mode {
-                        Mode::AddCategory => {
-                            if let Some((title, salary_str)) = input_text.split_once(':') {
-                                if let Ok(salary) = salary_str.trim().parse::<u64>() {
-                                    if let Ok(cat) = EmployeeCategory::new(title.trim(), salary) {
-                                        if !categories.iter().any(|c| c.title() == cat.title()) {
-                                            categories.push(cat);
-                                        }
+            KeyCode::Char('w') => {
+                input_text.clear();
+                *mode = Mode::SaveAttendees;
+            }
+            KeyCode::Char('l') => {
+                *selected = 0;
+                files.clear();
+                if let Ok(read) = fs::read_dir(data_dir()) {
+                    for entry in read.flatten() {
+                        if let Ok(ft) = entry.file_type() {
+                            if ft.is_file() {
+                                if let Some(name) = entry.file_name().to_str() {
+                                    if name != "categories.toml" {
+                                        files.push(name.to_string());
                                     }
                                 }
                             }
                         }
-                        Mode::DeleteCategory => {
-                            let title = input_text.trim();
-                            categories.retain(|c| c.title() != title);
-                        }
-                        Mode::AddAttendee => {
-                            let (title, count) = match input_text.split_once(':') {
-                                Some((t, c_str)) => match c_str.trim().parse::<u32>() {
-                                    Ok(c) => (t.trim(), c),
-                                    Err(_) => return,
-                                },
-                                None => (input_text.trim(), 1),
-                            };
-                            if let Some(cat) = categories.iter().find(|c| c.title() == title) {
-                                meeting.add_attendee(cat, count);
-                            }
-                        }
-                        Mode::RemoveAttendee => {
-                            if let Some((title, count_str)) = input_text.split_once(':') {
-                                if let Ok(count) = count_str.trim().parse::<u32>() {
-                                    meeting.remove_attendee(title.trim(), count);
+                    }
+                }
+                *mode = Mode::LoadAttendees;
+            }
+            KeyCode::Char('p') => *show_salaries = !*show_salaries,
+            _ => {}
+        },
+        Mode::AddCategory
+        | Mode::DeleteCategory
+        | Mode::AddAttendee
+        | Mode::RemoveAttendee
+        | Mode::SaveAttendees => match key_event.code {
+            KeyCode::Enter => {
+                match mode {
+                    Mode::AddCategory => {
+                        if let Some((title, salary_str)) = input_text.split_once(':') {
+                            if let Ok(salary) = salary_str.trim().parse::<u64>() {
+                                if let Ok(cat) = EmployeeCategory::new(title.trim(), salary) {
+                                    if !categories.iter().any(|c| c.title() == cat.title()) {
+                                        categories.push(cat);
+                                    }
                                 }
                             }
                         }
-                        Mode::View => {}
                     }
-                    *mode = Mode::View;
+                    Mode::DeleteCategory => {
+                        let title = input_text.trim();
+                        categories.retain(|c| c.title() != title);
+                    }
+                    Mode::AddAttendee => {
+                        let (title, count) = match input_text.split_once(':') {
+                            Some((t, c_str)) => match c_str.trim().parse::<u32>() {
+                                Ok(c) => (t.trim(), c),
+                                Err(_) => return,
+                            },
+                            None => (input_text.trim(), 1),
+                        };
+                        if let Some(cat) = categories.iter().find(|c| c.title() == title) {
+                            meeting.add_attendee(cat, count);
+                        }
+                    }
+                    Mode::RemoveAttendee => {
+                        if let Some((title, count_str)) = input_text.split_once(':') {
+                            if let Ok(count) = count_str.trim().parse::<u32>() {
+                                meeting.remove_attendee(title.trim(), count);
+                            }
+                        }
+                    }
+                    Mode::SaveAttendees => {
+                        let path = data_dir().join(input_text.trim());
+                        let data: Vec<AttendeeInfo> = meeting
+                            .attendees()
+                            .map(|(t, _s, c)| AttendeeInfo {
+                                title: t.to_string(),
+                                count: *c,
+                            })
+                            .collect();
+                        if let Err(err) = save_attendees(&path, &data) {
+                            let _ = err;
+                        }
+                    }
+                    Mode::View | Mode::LoadAttendees => {}
                 }
-                KeyCode::Esc => *mode = Mode::View,
-                KeyCode::Char(c) => input_text.push(c),
-                KeyCode::Backspace => {
-                    input_text.pop();
-                }
-                _ => {}
+                *mode = Mode::View;
             }
-        }
+            KeyCode::Esc => *mode = Mode::View,
+            KeyCode::Char(c) => input_text.push(c),
+            KeyCode::Backspace => {
+                input_text.pop();
+            }
+            _ => {}
+        },
+        Mode::LoadAttendees => match key_event.code {
+            KeyCode::Up => {
+                if *selected > 0 {
+                    *selected -= 1;
+                }
+            }
+            KeyCode::Down => {
+                if *selected + 1 < files.len() {
+                    *selected += 1;
+                }
+            }
+            KeyCode::Enter => {
+                if let Some(name) = files.get(*selected) {
+                    let path = data_dir().join(name);
+                    if let Ok(entries) = load_attendees(&path) {
+                        meeting.clear_attendees();
+                        for entry in entries {
+                            if let Some(cat) = categories.iter().find(|c| c.title() == entry.title)
+                            {
+                                meeting.add_attendee(cat, entry.count);
+                            }
+                        }
+                    }
+                }
+                *mode = Mode::View;
+            }
+            KeyCode::Esc => *mode = Mode::View,
+            _ => {}
+        },
     }
 }
 
@@ -258,13 +405,17 @@ fn process_key(
 /// database cannot be loaded or saved.
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<(), Box<dyn Error>> {
-    let db_path = PathBuf::from("categories.toml");
+    let dir = data_dir();
+    fs::create_dir_all(&dir)?;
+    let db_path = dir.join("categories.toml");
     let mut categories = load_categories(&db_path)?;
     let mut meeting = Meeting::new();
 
     let mut mode = Mode::View;
     let mut input_text = String::new();
     let mut show_salaries = false;
+    let mut load_files: Vec<String> = Vec::new();
+    let mut selected_idx: usize = 0;
 
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
@@ -283,6 +434,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             &mode,
             &input_text,
             show_salaries,
+            &load_files,
+            selected_idx,
         )?;
 
         let timeout = tick_rate
@@ -296,13 +449,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                         break;
                     }
                     process_key(
-                        key_event,
-                        &mut mode,
-                        &mut input_text,
-                        &mut show_salaries,
-                        &mut categories,
-                        &mut meeting,
-                    );
+                    key_event,
+                    &mut mode,
+                    &mut input_text,
+                    &mut show_salaries,
+                    &mut categories,
+                    &mut meeting,
+                    &mut load_files,
+                    &mut selected_idx,
+                );
                 }
             }
         }

@@ -3,7 +3,10 @@ mod tests {
     use std::path::PathBuf;
     use std::time::Duration;
 
-    use meeting_cost_tracker::{load_categories, save_categories, EmployeeCategory, Meeting};
+    use meeting_cost_tracker::{
+        load_attendees, load_categories, save_attendees, save_categories, AttendeeInfo,
+        EmployeeCategory, Meeting,
+    };
 
     #[test]
     fn test_employee_category_creation() {
@@ -67,5 +70,17 @@ mod tests {
         let loaded = load_categories(&path).unwrap();
         assert_eq!(original, loaded);
         std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn test_attendee_save_load() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let attendees = vec![AttendeeInfo {
+            title: "Dev".into(),
+            count: 2,
+        }];
+        save_attendees(tmp.path(), &attendees).unwrap();
+        let loaded = load_attendees(tmp.path()).unwrap();
+        assert_eq!(loaded, attendees);
     }
 }
