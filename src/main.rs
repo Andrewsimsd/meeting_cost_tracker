@@ -9,7 +9,9 @@ use std::{
     time::Duration,
 };
 
-use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode};
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind,
+};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -442,10 +444,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         if event::poll(timeout)? {
             if let Event::Key(key_event) = event::read()? {
-                if matches!(mode, Mode::View) && matches!(key_event.code, KeyCode::Char('q')) {
-                    break;
-                }
-                process_key(
+                if key_event.kind == KeyEventKind::Press {
+                    if matches!(mode, Mode::View) && matches!(key_event.code, KeyCode::Char('q')) {
+                        break;
+                    }
+                    process_key(
                     key_event,
                     &mut mode,
                     &mut input_text,
@@ -455,6 +458,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     &mut load_files,
                     &mut selected_idx,
                 );
+                }
             }
         }
 
