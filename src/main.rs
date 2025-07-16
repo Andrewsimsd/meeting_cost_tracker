@@ -72,8 +72,10 @@ enum Mode {
     AddCategory,
     /// Mode for deleting an existing [`EmployeeCategory`].
     DeleteCategory,
-    /// Mode for adding attendees to the [`Meeting`].
-    AddAttendee,
+    /// Mode for selecting a category when adding attendees.
+    AddAttendeeSelect,
+    /// Mode for entering the attendee count after selecting a category.
+    AddAttendeeCount,
     /// Mode for removing attendees from the [`Meeting`].
     RemoveAttendee,
     /// Mode for saving attendees to disk.
@@ -155,11 +157,20 @@ fn render_ui(
                 .block(Block::default().borders(Borders::ALL).title("Controls"));
                 f.render_widget(help, chunks[4]);
             }
-            Mode::AddAttendee => {
+            Mode::AddAttendeeSelect => {
+                let input_widget = Paragraph::new("")
+                    .block(
+                        Block::default()
+                            .title("Select category to add")
+                            .borders(Borders::ALL),
+                    );
+                f.render_widget(input_widget, chunks[4]);
+            }
+            Mode::AddAttendeeCount => {
                 let input_widget = Paragraph::new(input_text)
                     .block(
                         Block::default()
-                            .title("Enter: Title[:Count]")
+                            .title("Enter attendee count")
                             .borders(Borders::ALL),
                     );
                 f.render_widget(input_widget, chunks[4]);
@@ -219,7 +230,10 @@ fn render_ui(
             .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
         f.render_widget(meeting_widget, lists[0]);
 
-        if matches!(mode, Mode::LoadAttendees | Mode::DeleteCategory | Mode::RemoveAttendee) {
+        if matches!(
+            mode,
+            Mode::LoadAttendees | Mode::DeleteCategory | Mode::RemoveAttendee | Mode::AddAttendeeSelect
+        ) {
             let area = centered_rect(50, 50, size);
             let (title, items): (&str, Vec<Line>) = match mode {
                 Mode::LoadAttendees => {
@@ -271,6 +285,21 @@ fn render_ui(
                         .collect();
                     ("Remove attendee", items)
                 }
+                Mode::AddAttendeeSelect => {
+                    let items: Vec<Line> = categories
+                        .iter()
+                        .enumerate()
+                        .map(|(i, cat)| {
+                            let style = if i == selected {
+                                Style::default().add_modifier(Modifier::REVERSED)
+                            } else {
+                                Style::default()
+                            };
+                            Line::from(Span::styled(cat.title().to_string(), style))
+                        })
+                        .collect();
+                    ("Add attendee", items)
+                }
                 _ => unreachable!(),
             };
             let popup = Paragraph::new(items)
@@ -292,6 +321,7 @@ fn process_key(
     meeting: &mut Meeting,
     files: &mut Vec<String>,
     selected: &mut usize,
+    add_attendee_idx: &mut Option<usize>,
 ) {
     match *mode {
         Mode::View => match key_event.code {
@@ -314,7 +344,8 @@ fn process_key(
             }
             KeyCode::Char('e') => {
                 input_text.clear();
-                *mode = Mode::AddAttendee;
+                *selected = 0;
+                *mode = Mode::AddAttendeeSelect;
             }
             KeyCode::Char('r') => {
                 input_text.clear();
@@ -345,7 +376,7 @@ fn process_key(
             KeyCode::Char('p') => *show_salaries = !*show_salaries,
             _ => {}
         },
-        Mode::AddCategory | Mode::AddAttendee | Mode::SaveAttendees => match key_event.code {
+        Mode::AddCategory | Mode::AddAttendeeCount | Mode::SaveAttendees => match key_event.code {
             KeyCode::Enter => {
                 match *mode {
                     Mode::AddCategory => {
@@ -359,16 +390,18 @@ fn process_key(
                             }
                         }
                     }
-                    Mode::AddAttendee => {
-                        let (title, count) = match input_text.split_once(':') {
-                            Some((t, c_str)) => match c_str.trim().parse::<u32>() {
-                                Ok(c) => (t.trim(), c),
-                                Err(_) => return,
-                            },
-                            None => (input_text.trim(), 1),
+                    Mode::AddAttendeeCount => {
+                        let count = if input_text.trim().is_empty() {
+                            1
+                        } else if let Ok(c) = input_text.trim().parse::<u32>() {
+                            c
+                        } else {
+                            return;
                         };
-                        if let Some(cat) = categories.iter().find(|c| c.title() == title) {
-                            meeting.add_attendee(cat, count);
+                        if let Some(idx) = add_attendee_idx.take() {
+                            if let Some(cat) = categories.get(idx) {
+                                meeting.add_attendee(cat, count);
+                            }
                         }
                     }
                     Mode::SaveAttendees => {
@@ -384,7 +417,7 @@ fn process_key(
                             let _ = err;
                         }
                     }
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
                 *mode = Mode::View;
             }
@@ -416,6 +449,25 @@ fn process_key(
             KeyCode::Esc => *mode = Mode::View,
             _ => {}
         },
+        Mode::AddAttendeeSelect => match key_event.code {
+            KeyCode::Up => {
+                if *selected > 0 {
+                    *selected -= 1;
+                }
+            }
+            KeyCode::Down => {
+                if *selected + 1 < categories.len() {
+                    *selected += 1;
+                }
+            }
+            KeyCode::Enter => {
+                *add_attendee_idx = Some(*selected);
+                input_text.clear();
+                *mode = Mode::AddAttendeeCount;
+            }
+            KeyCode::Esc => *mode = Mode::View,
+            _ => {}
+        },
         Mode::RemoveAttendee => match key_event.code {
             KeyCode::Up => {
                 if *selected > 0 {
@@ -429,7 +481,8 @@ fn process_key(
                 }
             }
             KeyCode::Enter => {
-                let names: Vec<String> = meeting.attendees().map(|(t, _, _)| t.to_string()).collect();
+                let names: Vec<String> =
+                    meeting.attendees().map(|(t, _, _)| t.to_string()).collect();
                 if let Some(title) = names.get(*selected) {
                     let remove_count = meeting
                         .attendees()
@@ -497,6 +550,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut show_salaries = false;
     let mut load_files: Vec<String> = Vec::new();
     let mut selected_idx: usize = 0;
+    let mut add_attendee_idx: Option<usize> = None;
 
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
@@ -538,6 +592,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         &mut meeting,
                         &mut load_files,
                         &mut selected_idx,
+                        &mut add_attendee_idx,
                     );
                 }
             }
