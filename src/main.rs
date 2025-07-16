@@ -29,8 +29,7 @@ fn data_dir() -> PathBuf {
     let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
     let mut dir = exe_path
         .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+        .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
     dir.push("data");
     dir
 }
@@ -73,7 +72,7 @@ enum Mode {
     LoadAttendees,
 }
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn render_ui(
     terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
     meeting: &Meeting,
@@ -237,6 +236,7 @@ fn render_ui(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn process_key(
     key_event: crossterm::event::KeyEvent,
     mode: &mut Mode,
@@ -344,12 +344,11 @@ fn process_key(
                                 count: *c,
                             })
                             .collect();
-                        if let Err(e) = save_attendees(&path, &data) {
-                            let _ = e;
+                        if let Err(err) = save_attendees(&path, &data) {
+                            let _ = err;
                         }
                     }
-                    Mode::View => {}
-                    _ => {}
+                    Mode::View | Mode::LoadAttendees => {}
                 }
                 *mode = Mode::View;
             }
