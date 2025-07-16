@@ -145,7 +145,7 @@ fn render_ui(
             Mode::View => {
                 let help = Paragraph::new(Line::from(vec![
                     Span::styled(
-                        "[s] Start/Stop  [t] Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [w] Save Attendees  [l] Load Attendees  [p] Toggle Salaries [q] Quit",
+                        "[s] Start/Stop  [c] Reset  [a] Add Category  [d] Delete Category  [e] Add Employee  [r] Remove Employee  [w] Save Attendees  [l] Load Attendees  [p] Toggle Salaries [q] Quit",
                         Style::default().fg(Color::Yellow),
                     ),
                 ]))
@@ -259,7 +259,6 @@ fn process_key(
                     meeting.start();
                 }
             }
-            KeyCode::Char('t') => meeting.stop(),
             KeyCode::Char('c') => meeting.reset(),
             KeyCode::Char('a') => {
                 input_text.clear();
@@ -455,15 +454,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                         break;
                     }
                     process_key(
-                    key_event,
-                    &mut mode,
-                    &mut input_text,
-                    &mut show_salaries,
-                    &mut categories,
-                    &mut meeting,
-                    &mut load_files,
-                    &mut selected_idx,
-                );
+                        key_event,
+                        &mut mode,
+                        &mut input_text,
+                        &mut show_salaries,
+                        &mut categories,
+                        &mut meeting,
+                        &mut load_files,
+                        &mut selected_idx,
+                    );
                 }
             }
         }

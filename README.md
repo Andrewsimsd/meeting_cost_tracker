@@ -61,8 +61,7 @@ $ mct
 
 Keyboard shortcuts:
 
-- **s** – start the meeting
-- **t** – stop the meeting
+- **s** – start/stop the meeting
 - **c** – reset accumulated time and cost
 - **a** – add a new salary category
 - **d** – delete an existing category
