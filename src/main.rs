@@ -56,6 +56,14 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
+fn format_duration(d: Duration) -> String {
+    let secs = d.as_secs();
+    let hours = secs / 3600;
+    let minutes = (secs % 3600) / 60;
+    let seconds = secs % 60;
+    format!("{hours:02}:{minutes:02}:{seconds:02}")
+}
+
 /// UI modes controlling user interaction.
 enum Mode {
     /// Normal viewing mode where meeting stats are displayed.
@@ -111,9 +119,9 @@ fn render_ui(
         let status = Paragraph::new(Line::from(vec![
             Span::styled(
                 format!(
-                    "[{}] Duration: {:.1?}",
+                    "[{}] Duration: {}",
                     if running { "Running" } else { "Stopped" },
-                    duration
+                    format_duration(duration)
                 ),
                 Style::default()
                     .fg(if running { Color::Green } else { Color::Red })
