@@ -18,18 +18,41 @@ use meeting_cost_tracker::{
     EmployeeCategory, Meeting,
 };
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Alignment, Constraint, Direction, Layout};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use ratatui::Terminal;
 
 /// Returns the directory where persistent data should be stored.
 fn data_dir() -> PathBuf {
     let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
-    let mut dir = exe_path.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
+    let mut dir = exe_path
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."));
     dir.push("data");
     dir
+}
+
+/// Calculates a centered rectangle taking up the given percentage of the parent area.
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }
 
 /// UI modes controlling user interaction.
@@ -58,6 +81,8 @@ fn render_ui(
     mode: &Mode,
     input_text: &str,
     show_salaries: bool,
+    files: &[String],
+    selected: usize,
 ) -> std::io::Result<()> {
     terminal.draw(|f| {
         let size = f.area();
@@ -184,6 +209,30 @@ fn render_ui(
         let meeting_widget = Paragraph::new(meeting_list)
             .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
         f.render_widget(meeting_widget, lists[0]);
+
+        if matches!(mode, Mode::LoadAttendees) {
+            let area = centered_rect(50, 50, size);
+            let items: Vec<Line> = if files.is_empty() {
+                vec![Line::from(Span::raw("No attendee files found"))]
+            } else {
+                files
+                    .iter()
+                    .enumerate()
+                    .map(|(i, name)| {
+                        let style = if i == selected {
+                            Style::default().add_modifier(Modifier::REVERSED)
+                        } else {
+                            Style::default()
+                        };
+                        Line::from(Span::styled(name.clone(), style))
+                    })
+                    .collect()
+            };
+            let popup = Paragraph::new(items)
+                .block(Block::default().title("Load attendees").borders(Borders::ALL));
+            f.render_widget(Clear, area);
+            f.render_widget(popup, area);
+        }
     })?;
     Ok(())
 }
@@ -195,6 +244,8 @@ fn process_key(
     show_salaries: &mut bool,
     categories: &mut Vec<EmployeeCategory>,
     meeting: &mut Meeting,
+    files: &mut Vec<String>,
+    selected: &mut usize,
 ) {
     match *mode {
         Mode::View => match key_event.code {
@@ -223,7 +274,21 @@ fn process_key(
                 *mode = Mode::SaveAttendees;
             }
             KeyCode::Char('l') => {
-                input_text.clear();
+                *selected = 0;
+                files.clear();
+                if let Ok(read) = fs::read_dir(data_dir()) {
+                    for entry in read.flatten() {
+                        if let Ok(ft) = entry.file_type() {
+                            if ft.is_file() {
+                                if let Some(name) = entry.file_name().to_str() {
+                                    if name != "categories.toml" {
+                                        files.push(name.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 *mode = Mode::LoadAttendees;
             }
             KeyCode::Char('p') => *show_salaries = !*show_salaries,
@@ -233,8 +298,7 @@ fn process_key(
         | Mode::DeleteCategory
         | Mode::AddAttendee
         | Mode::RemoveAttendee
-        | Mode::SaveAttendees
-        | Mode::LoadAttendees => match key_event.code {
+        | Mode::SaveAttendees => match key_event.code {
             KeyCode::Enter => {
                 match mode {
                     Mode::AddCategory => {
@@ -284,23 +348,8 @@ fn process_key(
                             let _ = e;
                         }
                     }
-                    Mode::LoadAttendees => {
-                        let path = data_dir().join(input_text.trim());
-                        match load_attendees(&path) {
-                            Ok(entries) => {
-                                meeting.clear_attendees();
-                                for entry in entries {
-                                    if let Some(cat) =
-                                        categories.iter().find(|c| c.title() == entry.title)
-                                    {
-                                        meeting.add_attendee(cat, entry.count);
-                                    }
-                                }
-                            }
-                            Err(_) => {}
-                        }
-                    }
                     Mode::View => {}
+                    _ => {}
                 }
                 *mode = Mode::View;
             }
@@ -309,6 +358,35 @@ fn process_key(
             KeyCode::Backspace => {
                 input_text.pop();
             }
+            _ => {}
+        },
+        Mode::LoadAttendees => match key_event.code {
+            KeyCode::Up => {
+                if *selected > 0 {
+                    *selected -= 1;
+                }
+            }
+            KeyCode::Down => {
+                if *selected + 1 < files.len() {
+                    *selected += 1;
+                }
+            }
+            KeyCode::Enter => {
+                if let Some(name) = files.get(*selected) {
+                    let path = data_dir().join(name);
+                    if let Ok(entries) = load_attendees(&path) {
+                        meeting.clear_attendees();
+                        for entry in entries {
+                            if let Some(cat) = categories.iter().find(|c| c.title() == entry.title)
+                            {
+                                meeting.add_attendee(cat, entry.count);
+                            }
+                        }
+                    }
+                }
+                *mode = Mode::View;
+            }
+            KeyCode::Esc => *mode = Mode::View,
             _ => {}
         },
     }
@@ -335,6 +413,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut mode = Mode::View;
     let mut input_text = String::new();
     let mut show_salaries = false;
+    let mut load_files: Vec<String> = Vec::new();
+    let mut selected_idx: usize = 0;
 
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
@@ -353,6 +433,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             &mode,
             &input_text,
             show_salaries,
+            &load_files,
+            selected_idx,
         )?;
 
         let timeout = tick_rate
@@ -371,6 +453,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     &mut show_salaries,
                     &mut categories,
                     &mut meeting,
+                    &mut load_files,
+                    &mut selected_idx,
                 );
             }
         }
