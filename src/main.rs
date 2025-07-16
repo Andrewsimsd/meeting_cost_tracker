@@ -434,8 +434,7 @@ fn process_key(
                     let remove_count = meeting
                         .attendees()
                         .find(|(t, _, _)| *t == title.as_str())
-                        .map(|(_, _, c)| *c)
-                        .unwrap_or(0);
+                        .map_or(0, |(_, _, c)| *c);
                     meeting.remove_attendee(title, remove_count);
                 }
                 *mode = Mode::View;
