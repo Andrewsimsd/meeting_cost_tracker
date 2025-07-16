@@ -145,11 +145,6 @@ fn render_ui(
                     .block(Block::default().title("Enter: Title:Salary").borders(Borders::ALL));
                 f.render_widget(input_widget, chunks[4]);
             }
-            Mode::DeleteCategory => {
-                let input_widget = Paragraph::new(input_text)
-                    .block(Block::default().title("Enter title to delete").borders(Borders::ALL));
-                f.render_widget(input_widget, chunks[4]);
-            }
             Mode::View => {
                 let help = Paragraph::new(Line::from(vec![
                     Span::styled(
@@ -170,8 +165,8 @@ fn render_ui(
                 f.render_widget(input_widget, chunks[4]);
             }
             Mode::RemoveAttendee => {
-                let input_widget = Paragraph::new(input_text)
-                    .block(Block::default().title("Enter: Title:Count to remove").borders(Borders::ALL));
+                let input_widget = Paragraph::new("")
+                    .block(Block::default().title("Select attendee to remove").borders(Borders::ALL));
                 f.render_widget(input_widget, chunks[4]);
             }
             Mode::SaveAttendees => {
@@ -182,6 +177,11 @@ fn render_ui(
             Mode::LoadAttendees => {
                 let input_widget = Paragraph::new(input_text)
                     .block(Block::default().title("Enter filename to load").borders(Borders::ALL));
+                f.render_widget(input_widget, chunks[4]);
+            }
+            Mode::DeleteCategory => {
+                let input_widget = Paragraph::new("")
+                    .block(Block::default().title("Select category to delete").borders(Borders::ALL));
                 f.render_widget(input_widget, chunks[4]);
             }
         }
@@ -219,26 +219,62 @@ fn render_ui(
             .block(Block::default().borders(Borders::ALL).title("Current Meeting"));
         f.render_widget(meeting_widget, lists[0]);
 
-        if matches!(mode, Mode::LoadAttendees) {
+        if matches!(mode, Mode::LoadAttendees | Mode::DeleteCategory | Mode::RemoveAttendee) {
             let area = centered_rect(50, 50, size);
-            let items: Vec<Line> = if files.is_empty() {
-                vec![Line::from(Span::raw("No attendee files found"))]
-            } else {
-                files
-                    .iter()
-                    .enumerate()
-                    .map(|(i, name)| {
-                        let style = if i == selected {
-                            Style::default().add_modifier(Modifier::REVERSED)
-                        } else {
-                            Style::default()
-                        };
-                        Line::from(Span::styled(name.clone(), style))
-                    })
-                    .collect()
+            let (title, items): (&str, Vec<Line>) = match mode {
+                Mode::LoadAttendees => {
+                    let items: Vec<Line> = if files.is_empty() {
+                        vec![Line::from(Span::raw("No attendee files found"))]
+                    } else {
+                        files
+                            .iter()
+                            .enumerate()
+                            .map(|(i, name)| {
+                                let style = if i == selected {
+                                    Style::default().add_modifier(Modifier::REVERSED)
+                                } else {
+                                    Style::default()
+                                };
+                                Line::from(Span::styled(name.clone(), style))
+                            })
+                            .collect()
+                    };
+                    ("Load attendees", items)
+                }
+                Mode::DeleteCategory => {
+                    let items: Vec<Line> = categories
+                        .iter()
+                        .enumerate()
+                        .map(|(i, cat)| {
+                            let style = if i == selected {
+                                Style::default().add_modifier(Modifier::REVERSED)
+                            } else {
+                                Style::default()
+                            };
+                            Line::from(Span::styled(cat.title().to_string(), style))
+                        })
+                        .collect();
+                    ("Delete category", items)
+                }
+                Mode::RemoveAttendee => {
+                    let items: Vec<Line> = meeting
+                        .attendees()
+                        .enumerate()
+                        .map(|(i, (title, _salary, count))| {
+                            let style = if i == selected {
+                                Style::default().add_modifier(Modifier::REVERSED)
+                            } else {
+                                Style::default()
+                            };
+                            Line::from(Span::styled(format!("{title} x {count}"), style))
+                        })
+                        .collect();
+                    ("Remove attendee", items)
+                }
+                _ => unreachable!(),
             };
             let popup = Paragraph::new(items)
-                .block(Block::default().title("Load attendees").borders(Borders::ALL));
+                .block(Block::default().title(title).borders(Borders::ALL));
             f.render_widget(Clear, area);
             f.render_widget(popup, area);
         }
@@ -309,13 +345,9 @@ fn process_key(
             KeyCode::Char('p') => *show_salaries = !*show_salaries,
             _ => {}
         },
-        Mode::AddCategory
-        | Mode::DeleteCategory
-        | Mode::AddAttendee
-        | Mode::RemoveAttendee
-        | Mode::SaveAttendees => match key_event.code {
+        Mode::AddCategory | Mode::AddAttendee | Mode::SaveAttendees => match key_event.code {
             KeyCode::Enter => {
-                match mode {
+                match *mode {
                     Mode::AddCategory => {
                         if let Some((title, salary_str)) = input_text.split_once(':') {
                             if let Ok(salary) = salary_str.trim().parse::<u64>() {
@@ -327,10 +359,6 @@ fn process_key(
                             }
                         }
                     }
-                    Mode::DeleteCategory => {
-                        let title = input_text.trim();
-                        categories.retain(|c| c.title() != title);
-                    }
                     Mode::AddAttendee => {
                         let (title, count) = match input_text.split_once(':') {
                             Some((t, c_str)) => match c_str.trim().parse::<u32>() {
@@ -341,13 +369,6 @@ fn process_key(
                         };
                         if let Some(cat) = categories.iter().find(|c| c.title() == title) {
                             meeting.add_attendee(cat, count);
-                        }
-                    }
-                    Mode::RemoveAttendee => {
-                        if let Some((title, count_str)) = input_text.split_once(':') {
-                            if let Ok(count) = count_str.trim().parse::<u32>() {
-                                meeting.remove_attendee(title.trim(), count);
-                            }
                         }
                     }
                     Mode::SaveAttendees => {
@@ -363,7 +384,7 @@ fn process_key(
                             let _ = err;
                         }
                     }
-                    Mode::View | Mode::LoadAttendees => {}
+                    _ => unreachable!()
                 }
                 *mode = Mode::View;
             }
@@ -372,6 +393,54 @@ fn process_key(
             KeyCode::Backspace => {
                 input_text.pop();
             }
+            _ => {}
+        },
+        Mode::DeleteCategory => match key_event.code {
+            KeyCode::Up => {
+                if *selected > 0 {
+                    *selected -= 1;
+                }
+            }
+            KeyCode::Down => {
+                if *selected + 1 < categories.len() {
+                    *selected += 1;
+                }
+            }
+            KeyCode::Enter => {
+                if let Some(cat) = categories.get(*selected) {
+                    let title = cat.title().to_string();
+                    categories.retain(|c| c.title() != title);
+                }
+                *mode = Mode::View;
+            }
+            KeyCode::Esc => *mode = Mode::View,
+            _ => {}
+        },
+        Mode::RemoveAttendee => match key_event.code {
+            KeyCode::Up => {
+                if *selected > 0 {
+                    *selected -= 1;
+                }
+            }
+            KeyCode::Down => {
+                let count = meeting.attendees().count();
+                if *selected + 1 < count {
+                    *selected += 1;
+                }
+            }
+            KeyCode::Enter => {
+                let names: Vec<String> = meeting.attendees().map(|(t, _, _)| t.to_string()).collect();
+                if let Some(title) = names.get(*selected) {
+                    let remove_count = meeting
+                        .attendees()
+                        .find(|(t, _, _)| *t == title.as_str())
+                        .map(|(_, _, c)| *c)
+                        .unwrap_or(0);
+                    meeting.remove_attendee(title, remove_count);
+                }
+                *mode = Mode::View;
+            }
+            KeyCode::Esc => *mode = Mode::View,
             _ => {}
         },
         Mode::LoadAttendees => match key_event.code {
