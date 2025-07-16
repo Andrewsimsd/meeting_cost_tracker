@@ -2,7 +2,12 @@
 // main.rs
 #![warn(clippy::pedantic)]
 
-use std::{error::Error, path::PathBuf, time::Duration};
+use std::{
+    error::Error,
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode};
 use crossterm::terminal::{
@@ -18,6 +23,14 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Terminal;
+
+/// Returns the directory where persistent data should be stored.
+fn data_dir() -> PathBuf {
+    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
+    let mut dir = exe_path.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
+    dir.push("data");
+    dir
+}
 
 /// UI modes controlling user interaction.
 enum Mode {
@@ -129,12 +142,12 @@ fn render_ui(
             }
             Mode::SaveAttendees => {
                 let input_widget = Paragraph::new(input_text)
-                    .block(Block::default().title("Enter file to save").borders(Borders::ALL));
+                    .block(Block::default().title("Enter filename to save").borders(Borders::ALL));
                 f.render_widget(input_widget, chunks[4]);
             }
             Mode::LoadAttendees => {
                 let input_widget = Paragraph::new(input_text)
-                    .block(Block::default().title("Enter file to load").borders(Borders::ALL));
+                    .block(Block::default().title("Enter filename to load").borders(Borders::ALL));
                 f.render_widget(input_widget, chunks[4]);
             }
         }
@@ -259,7 +272,7 @@ fn process_key(
                         }
                     }
                     Mode::SaveAttendees => {
-                        let path = PathBuf::from(input_text.trim());
+                        let path = data_dir().join(input_text.trim());
                         let data: Vec<AttendeeInfo> = meeting
                             .attendees()
                             .map(|(t, _s, c)| AttendeeInfo {
@@ -272,7 +285,7 @@ fn process_key(
                         }
                     }
                     Mode::LoadAttendees => {
-                        let path = PathBuf::from(input_text.trim());
+                        let path = data_dir().join(input_text.trim());
                         match load_attendees(&path) {
                             Ok(entries) => {
                                 meeting.clear_attendees();
@@ -313,7 +326,9 @@ fn process_key(
 /// database cannot be loaded or saved.
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<(), Box<dyn Error>> {
-    let db_path = PathBuf::from("categories.toml");
+    let dir = data_dir();
+    fs::create_dir_all(&dir)?;
+    let db_path = dir.join("categories.toml");
     let mut categories = load_categories(&db_path)?;
     let mut meeting = Meeting::new();
 

@@ -73,8 +73,8 @@ Keyboard shortcuts:
 - **p** – toggle salary visibility
 - **q** – quit
 
-Categories are persisted to `categories.toml` in the current directory.
-Attendee lists can be saved and loaded from custom TOML files using the **w** and **l** keys.
+Categories are persisted to `data/categories.toml` next to the executable.
+Attendee lists can be saved and loaded from the same directory using the **w** and **l** keys.
 
 ## See Also
 
