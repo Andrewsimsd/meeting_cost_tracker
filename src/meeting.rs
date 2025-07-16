@@ -237,6 +237,11 @@ impl Meeting {
         self.running = false;
     }
 
+    /// Removes all attendees without modifying timing information.
+    pub fn clear_attendees(&mut self) {
+        self.attendees.clear();
+    }
+
     /// Returns the total duration the meeting has been active.
     ///
     /// ## Example
