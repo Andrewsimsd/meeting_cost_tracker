@@ -132,7 +132,7 @@ pub fn save_categories<P: AsRef<Path>>(
 /// ```
 /// use std::path::Path;
 /// use meeting_cost_tracker::load_attendees;
-/// let attendees = load_attendees(Path::new("my_list.toml")).unwrap();
+/// let attendees = load_attendees(Path::new("does_not_exist.toml")).unwrap();
 /// assert!(attendees.is_empty());
 /// ```
 ///
