@@ -83,4 +83,21 @@ mod tests {
         let loaded = load_attendees(tmp.path()).unwrap();
         assert_eq!(loaded, attendees);
     }
+
+    #[test]
+    fn test_clear_attendees() {
+        let cat = EmployeeCategory::new("Ops", 70_000).unwrap();
+        let mut meeting = Meeting::new();
+        meeting.add_attendee(&cat, 1);
+        meeting.clear_attendees();
+        assert_eq!(meeting.attendees().count(), 0);
+    }
+
+    #[test]
+    fn test_attendee_count_helper() {
+        let cat = EmployeeCategory::new("Dev", 60_000).unwrap();
+        let mut meeting = Meeting::new();
+        meeting.add_attendee(&cat, 4);
+        assert_eq!(meeting.attendee_count(cat.title()), Some(4));
+    }
 }
