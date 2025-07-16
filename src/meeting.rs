@@ -3,11 +3,17 @@ use std::time::{Duration, Instant};
 
 use crate::model::EmployeeCategory;
 
-/// Tracks a running meeting's configuration and state.
-#[derive(Debug)]
+/// Internal record of attendees sharing the same salary.
+#[derive(Debug, Clone, Default)]
 struct Attendee {
     salary: u64,
     count: u32,
+}
+
+impl Attendee {
+    fn new(salary: u64, count: u32) -> Self {
+        Self { salary, count }
+    }
 }
 
 #[derive(Debug)]
@@ -74,10 +80,7 @@ impl Meeting {
         let entry = self
             .attendees
             .entry(category.title().to_string())
-            .or_insert_with(|| Attendee {
-                salary: category.salary(),
-                count: 0,
-            });
+            .or_insert_with(|| Attendee::new(category.salary(), 0));
         entry.count += count;
     }
 
@@ -144,6 +147,12 @@ impl Meeting {
         self.attendees
             .iter()
             .map(|(title, attendee)| (title.as_str(), attendee.salary, &attendee.count))
+    }
+
+    /// Returns the attendee count for a given category title, if present.
+    #[must_use]
+    pub fn attendee_count(&self, title: &str) -> Option<u32> {
+        self.attendees.get(title).map(|a| a.count)
     }
 
     /// Starts the meeting timer.
@@ -452,5 +461,28 @@ mod tests {
         meeting.start();
         sleep(Duration::from_millis(5));
         assert!(meeting.current_duration() > Duration::ZERO);
+    }
+
+    #[test]
+    fn attendee_count_works() {
+        let cat = sample_category();
+        let mut meeting = Meeting::new();
+        assert_eq!(meeting.attendee_count(cat.title()), None);
+        meeting.add_attendee(&cat, 2);
+        assert_eq!(meeting.attendee_count(cat.title()), Some(2));
+    }
+
+    #[test]
+    fn clear_attendees_leaves_timing() {
+        let cat = sample_category();
+        let mut meeting = Meeting::new();
+        meeting.add_attendee(&cat, 1);
+        meeting.start();
+        sleep(Duration::from_millis(5));
+        meeting.stop();
+        let duration = meeting.duration();
+        meeting.clear_attendees();
+        assert_eq!(meeting.attendees().count(), 0);
+        assert_eq!(meeting.duration(), duration);
     }
 }

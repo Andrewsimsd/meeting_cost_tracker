@@ -521,7 +521,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
-            .unwrap_or_else(|| Duration::from_secs(0));
+            .unwrap_or(Duration::ZERO);
 
         if event::poll(timeout)? {
             if let Event::Key(key_event) = event::read()? {
@@ -559,4 +559,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     save_categories(&db_path, &categories)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn duration_formatting() {
+        assert_eq!(format_duration(Duration::from_secs(0)), "00:00:00");
+        assert_eq!(format_duration(Duration::from_secs(3661)), "01:01:01");
+    }
+
+    #[test]
+    fn centered_rect_respects_size() {
+        let area = Rect::new(0, 0, 100, 100);
+        let popup = centered_rect(50, 50, area);
+        assert_eq!(popup.width, 50);
+        assert_eq!(popup.height, 50);
+    }
 }
